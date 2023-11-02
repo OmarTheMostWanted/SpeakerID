@@ -11,10 +11,6 @@ import pickle
 import concurrent.futures
 from pydub import AudioSegment
 
-
-
-
-
 def extract_features(filename):
 
     # Load the audio file
@@ -47,45 +43,81 @@ def extract_features(filename):
     )
     return features
 
-def extract_features_asyncronous(filename, threads):
+def extract_features_asyncronous(filename, threads=4):
+    """
+    This function extracts audio features from a given audio file using multiple threads.
+    
+    Parameters:
+    filename (str): The path to the audio file.
+    threads (int): The number of threads to use for feature extraction. Default is 4.
+
+    Returns:
+    np.array: A numpy array containing the extracted features.
+    """
 
     # Load the audio file
     audio, sample_rate = librosa.load(filename)
 
     # Define the functions to be executed in separate threads
+
     def extract_mfccs():
+        """
+        MFCCs (Mel-frequency cepstral coefficients) provide a small set of features 
+        which concisely describe the overall shape of a spectral envelope. 
+        In MIR, it is often used to describe timbre.
+        """
         print(f"Extracting MFCCs features from {filename}")
         mfccs = librosa.feature.mfcc(y=audio, sr=sample_rate, n_mfcc=40)
         return np.mean(mfccs.T, axis=0)
 
     def extract_chroma():
+        """
+        Chroma features are an interesting and powerful representation for music audio 
+        in which the entire spectrum is projected onto 12 bins representing the 12 
+        distinct semitones (or chroma) of the musical octave. 
+        """
         print(f"Extracting Chroma features from {filename}")
         chroma = librosa.feature.chroma_stft(y=audio, sr=sample_rate)
         return np.mean(chroma.T, axis=0)
 
     def extract_spec_contrast():
+        """
+        Spectral contrast is defined as the difference in amplitude between peaks and valleys in a sound spectrum.
+        It provides a measure of spectral shape that has been shown to be important in the perception of timbre.
+        """
         print(f"Extracting Spectral Contrast features from {filename}")
         spec_contrast = librosa.feature.spectral_contrast(y=audio, sr=sample_rate)
         return np.mean(spec_contrast.T, axis=0)
 
     def extract_tonnetz():
+        """
+        The tonnetz is a representation of musical pitch classes that has been used to analyze harmony in Western tonal music.
+        It can be useful for key detection and chord recognition.
+        """
         print(f"Extracting Tonnetz features from {filename}")
         tonnetz = librosa.feature.tonnetz(y=librosa.effects.harmonic(audio), sr=sample_rate)
         return np.mean(tonnetz.T, axis=0)
 
     # Use a ThreadPoolExecutor to execute the functions in separate threads
     with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
-        mfccs_processed = executor.submit(extract_mfccs).result()
-        chroma_processed = executor.submit(extract_chroma).result()
-        spec_contrast_processed = executor.submit(extract_spec_contrast).result()
-        tonnetz_processed = executor.submit(extract_tonnetz).result()
+        
+        # Submit all tasks to executor
+        futures = []
+        futures.append(executor.submit(extract_mfccs))
+        futures.append(executor.submit(extract_chroma))
+        futures.append(executor.submit(extract_spec_contrast))
+        futures.append(executor.submit(extract_tonnetz))
+
+        # Wait for all tasks to complete and retrieve their results
+        results = [f.result() for f in futures]
 
     print(f"Concatenating features from {filename}")
+    
     # Concatenate all features into one array
-    features = np.concatenate(
-        [mfccs_processed, chroma_processed, spec_contrast_processed, tonnetz_processed]
-    )
+    features = np.concatenate(results)
+    
     return features
+
 
 
 def read_files(audio_files_dir, threads):
@@ -125,7 +157,7 @@ def read_files(audio_files_dir, threads):
     return (data , labels)
 
 
-def Train(data , labels):
+def TrainSupportVectorClassification(data , labels):
     # Convert data and labels to numpy arrays
     data = np.array(data)
     labels = np.array(labels)
@@ -213,12 +245,17 @@ def predict_speaker_with_probability(model, le , threads=0):
 
 if __name__ == "__main__":
 
-    data , labels = read_files("audio_files_wav", threads=8)
+    features = extract_features_asyncronous("audio_files_wav/Bryn Roberts/eventsof1848_01_milnes_64kb.wav" , 10)
+    
+    print(type(features))
+    print(features)
 
-    model , le = Train(data , labels)
+    # data , labels = read_files("audio_files_wav", threads=8)
 
-    save_model(model , le)
+    # model , le = Train(data , labels)
 
-    # model , le = load_model("model_91.67.pkl" , "label_encoder_91.67.pkl")
+    # save_model(model , le)
 
-    predict_speaker_with_probability(model , le)
+    # # model , le = load_model("model_91.67.pkl" , "label_encoder_91.67.pkl")
+
+    # predict_speaker_with_probability(model , le)
