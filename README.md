@@ -3,32 +3,32 @@
 
 ## Features for Speaker Identification
 
-    MFCCs (Mel Frequency Cepstral Coefficients): MFCCs are a compact representation of the spectrum of an audio signal1. They contain information about the rate changes in different spectrum bands1. If a cepstral coefficient has a positive value, the majority of the spectral energy is concentrated in the low-frequency regions. On the other hand, if a cepstral coefficient has a negative value, it represents that most of the spectral energy is concentrated at high frequencies1. MFCCs have proven to be very effective in the feature extraction process for speaker identification1.
+MFCCs (Mel Frequency Cepstral Coefficients): MFCCs are a compact representation of the spectrum of an audio signal1. They contain information about the rate changes in different spectrum bands1. If a cepstral coefficient has a positive value, the majority of the spectral energy is concentrated in the low-frequency regions. On the other hand, if a cepstral coefficient has a negative value, it represents that most of the spectral energy is concentrated at high frequencies1. MFCCs have proven to be very effective in the feature extraction process for speaker identification1.
 
-    Chroma: Chroma features represent the tonal content of a musical audio signal in a condensed form2. They capture harmonic and melodic characteristics of music, while being robust to changes in timbre and instrumentation3. Chroma features are also referred to as pitch class profiles and are a powerful tool for analyzing music whose pitches can be meaningfully categorized3.
+Chroma: Chroma features represent the tonal content of a musical audio signal in a condensed form2. They capture harmonic and melodic characteristics of music, while being robust to changes in timbre and instrumentation3. Chroma features are also referred to as pitch class profiles and are a powerful tool for analyzing music whose pitches can be meaningfully categorized3.
 
-    Spectral Contrast: Spectral contrast refers to the difference in amplitude between peaks and valleys in a sound spectrum4. It can provide valuable information about the spectral characteristics of different speakers and contribute to speaker identification.
+Spectral Contrast: Spectral contrast refers to the difference in amplitude between peaks and valleys in a sound spectrum4. It can provide valuable information about the spectral characteristics of different speakers and contribute to speaker identification.
 
-    Tonnetz (Tonal Centroid Features): Tonnetz is a geometric representation of musical pitch classes which represents harmonic relations among pitches5. It can provide useful information about the tonal characteristics of a speaker’s voice.
+Tonnetz (Tonal Centroid Features): Tonnetz is a geometric representation of musical pitch classes which represents harmonic relations among pitches5. It can provide useful information about the tonal characteristics of a speaker’s voice.
 
 In terms of suitability for speaker identification, all these features provide valuable information about different aspects of a speaker’s voice. However, MFCCs are often considered the most effective due to their ability to capture unique characteristics of individual voices 1.
 
 ## Machine Learning Models for Speaker Identification
 
-    Support Vector Classifier (SVC): SVC is a powerful machine learning model used for classification tasks. It has been used effectively for text-dependent speaker identification6. However, its performance may vary depending on the choice of kernel and other hyperparameters 6.
+Support Vector Classifier (SVC): SVC is a powerful machine learning model used for classification tasks. It has been used effectively for text-dependent speaker identification6. However, its performance may vary depending on the choice of kernel and other hyperparameters 6.
 
 ### For deep learning methods, you might consider:
 
-    Convolutional Neural Networks (CNNs): CNNs have shown excellent performance in speaker identification tasks, especially when used with spectrogram-like features such as MFCCs78. They are capable of automatically learning hierarchical representations from the input data, which can be particularly useful for capturing complex patterns in speech signals.
+Convolutional Neural Networks (CNNs): CNNs have shown excellent performance in speaker identification tasks, especially when used with spectrogram-like features such as MFCCs78. They are capable of automatically learning hierarchical representations from the input data, which can be particularly useful for capturing complex patterns in speech signals.
 
-    Recurrent Neural Networks (RNNs): RNNs are particularly suited for sequential data like audio signals. They can model temporal dependencies in speech signals, making them a good choice for speaker identification tasks.
+Recurrent Neural Networks (RNNs): RNNs are particularly suited for sequential data like audio signals. They can model temporal dependencies in speech signals, making them a good choice for speaker identification tasks.
 
-    Deep Neural Networks (DNNs): DNNs have been used effectively for speaker recognition tasks, including both verification and identification 9 10. They can learn highly abstract features from utterances, making them suitable for text-independent speaker identification 9.
+Deep Neural Networks (DNNs): DNNs have been used effectively for speaker recognition tasks, including both verification and identification 9 10. They can learn highly abstract features from utterances, making them suitable for text-independent speaker identification 9.
 
 ## In terms of suitability for small and large datasets:
 
-    For small datasets, simpler models like SVC might be more suitable as they are less prone to overfitting and require less computational resources.
-    For large datasets, deep learning methods like CNNs, RNNs, and DNNs can be more effective as they can leverage large amounts of data to learn complex representations.
+For small datasets, simpler models like SVC might be more suitable as they are less prone to overfitting and require less computational resources.
+For large datasets, deep learning methods like CNNs, RNNs, and DNNs can be more effective as they can leverage large amounts of data to learn complex representations.
 
 Remember that model selection should also take into account factors such as computational resources and the specific characteristics of your data.
 References
