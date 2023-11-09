@@ -159,6 +159,5 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
-audio_files_wav
-audio_files_mp3/*
-/audio_files_mp3/
+audio_files_wav/*.wav
+audio_files_mp3/*.mp3
