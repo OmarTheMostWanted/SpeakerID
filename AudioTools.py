@@ -3,7 +3,6 @@ import concurrent.futures
 from pydub import AudioSegment
 from tqdm import tqdm
 import sys
-import soundfile as sf
 
 
 def convert_file_to_wav(audio_path, wav_path, audio_format):

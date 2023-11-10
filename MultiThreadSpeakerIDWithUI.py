@@ -9,7 +9,6 @@ import os
 import tqdm  # for the progress bar
 import pickle
 import concurrent.futures
-from pydub import AudioSegment
 
 def extract_features(filename):
 
