@@ -161,3 +161,7 @@ cython_debug/
 
 audio_files_wav/*.wav
 audio_files_mp3/*.mp3
+
+
+secret.key
+config.ini
