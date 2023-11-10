@@ -4,13 +4,16 @@ import numpy as np
 from keras.models import Sequential
 from keras.layers import Dense
 
+
 # Load audio files
 def load_audio_files(file_paths):
     return [librosa.load(path)[0] for path in file_paths]
 
+
 # Extract features from audio signals
 def extract_features(audio_signals):
     return [librosa.feature.mfcc(y=signal) for signal in audio_signals]
+
 
 # Create a simple feedforward neural network model
 def create_model(input_shape):
@@ -21,6 +24,7 @@ def create_model(input_shape):
     model.add(Dense(10, activation='softmax'))  # Assuming we have 10 different speakers
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
+
 
 # Load your data
 audio_files = ["speaker1.wav", "speaker2.wav", "speaker3.wav"]  # Add your audio file paths here
@@ -75,9 +79,11 @@ import numpy as np
 from keras.models import Sequential
 from keras.layers import Dense
 
+
 # Load audio files
 def load_audio_files(file_paths):
     return [librosa.load(path)[0] for path in file_paths]
+
 
 # Extract features from audio signals
 def extract_features(audio_signals):
@@ -89,6 +95,7 @@ def extract_features(audio_signals):
         features.append(np.concatenate((mfcc, spectral_contrast, chroma_stft)))
     return features
 
+
 # Create a simple feedforward neural network model
 def create_model(input_shape):
     model = Sequential()
@@ -98,6 +105,7 @@ def create_model(input_shape):
     model.add(Dense(10, activation='softmax'))  # Assuming we have 10 different speakers
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
+
 
 # Load your data
 audio_files = ["speaker1.wav", "speaker2.wav", "speaker3.wav"]  # Add your audio file paths here

@@ -93,7 +93,6 @@ if __name__ == "__main__":
     main()
     quit()
 
-
     if len(sys.argv) == 3:
         audio_file_path = sys.argv[1]
         language_model_path = sys.argv[2]
@@ -109,7 +108,7 @@ if __name__ == "__main__":
         language_model_path = sys.argv[2]
         transcription_file_path = sys.argv[3]
         generated_transcription = transcribe_audio(audio_file_path, language_model_path)
-        score = compare_transcriptions(generated_transcription , transcription_file_path)
+        score = compare_transcriptions(generated_transcription, transcription_file_path)
         print(f"Transcription acuracy {score}")
 
     else:

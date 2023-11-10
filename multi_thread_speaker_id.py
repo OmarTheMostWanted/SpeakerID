@@ -10,8 +10,8 @@ import tqdm  # for the progress bar
 import pickle
 import concurrent.futures
 
-def extract_features(filename):
 
+def extract_features(filename):
     # Load the audio file
     audio, sample_rate = librosa.load(filename)
 
@@ -41,6 +41,7 @@ def extract_features(filename):
         [mfccs_processed, chroma_processed, spec_contrast_processed, tonnetz_processed]
     )
     return features
+
 
 def extract_features_asyncronous(filename, threads=4):
     """
@@ -99,7 +100,6 @@ def extract_features_asyncronous(filename, threads=4):
 
     # Use a ThreadPoolExecutor to execute the functions in separate threads
     with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
-        
         # Submit all tasks to executor
         futures = []
         futures.append(executor.submit(extract_mfccs))
@@ -111,16 +111,14 @@ def extract_features_asyncronous(filename, threads=4):
         results = [f.result() for f in futures]
 
     print(f"Concatenating features from {filename}")
-    
+
     # Concatenate all features into one array
     features = np.concatenate(results)
-    
+
     return features
 
 
-
 def read_files(audio_files_dir, threads):
-
     # Create a pool of processes
     pool = mp.Pool(processes=threads)
 
@@ -147,16 +145,15 @@ def read_files(audio_files_dir, threads):
         data.extend(results)
         labels.extend([speaker] * len(results))
 
-
     # Close the pool of processes
     pool.close()
     # Wait for all the threads to finish
     pool.join()
 
-    return (data , labels)
+    return (data, labels)
 
 
-def TrainSupportVectorClassification(data , labels):
+def TrainSupportVectorClassification(data, labels):
     # Convert data and labels to numpy arrays
     data = np.array(data)
     labels = np.array(labels)
@@ -181,11 +178,11 @@ def TrainSupportVectorClassification(data , labels):
 
     # Calculate the accuracy of our model and print it out with more information
     accuracy = accuracy_score(y_true=y_test, y_pred=y_pred)
-    print(f"Model Accuracy: {accuracy*100:.2f}%")
-    return (model , le)
+    print(f"Model Accuracy: {accuracy * 100:.2f}%")
+    return (model, le)
 
 
-def save_model(model , le):
+def save_model(model, le):
     # Save the trained model and add a progress message
     print("Saving model...")
     with open("model.pkl", "wb") as f:
@@ -195,6 +192,7 @@ def save_model(model , le):
     print("Saving label encoder...")
     with open("label_encoder.pkl", "wb") as f:
         pickle.dump(le, f)
+
 
 def load_model(model_file, label_encoder_file):
     # Load the trained model and add a progress message
@@ -208,44 +206,48 @@ def load_model(model_file, label_encoder_file):
         le = pickle.load(f)
 
     # Now you can use `model.predict_proba()` to get prediction probabilities for new data
-    return (model , le)
+    return (model, le)
 
-def predict_speaker(model , le , threads=0):
+
+def predict_speaker(model, le, threads=0):
     while True:
         # Ask user for an audio file path and identify it.
         audio_file_path = input("Please enter an audio file path or x to close: ")
         if audio_file_path == "x":
             quit(0)
-        features = threads > 0 and extract_features_asyncronous(audio_file_path , threads) or  extract_features(audio_file_path)
+        features = threads > 0 and extract_features_asyncronous(audio_file_path, threads) or extract_features(
+            audio_file_path)
         speaker_id = model.predict([features])
         speaker_name = le.inverse_transform(speaker_id)
         print(f"The speaker is: {speaker_name[0]}")
         return speaker_name
 
-def predict_speaker_with_probability(model, le , threads=0):
+
+def predict_speaker_with_probability(model, le, threads=0):
     while True:
         # Ask user for an audio file path and identify it.
         audio_file_path = input("Please enter an audio file path or 'x' to close: ")
         if audio_file_path.lower() == "x":
             print("Closing the program.")
             break
-        features = threads > 0 and extract_features_asyncronous(audio_file_path , threads) or extract_features(audio_file_path)
+        features = threads > 0 and extract_features_asyncronous(audio_file_path, threads) or extract_features(
+            audio_file_path)
         speaker_id = model.predict([features])
         speaker_name = le.inverse_transform(speaker_id)
-        
+
         # Get the probability of the prediction
         probability = model.predict_proba([features])
         max_prob_index = np.argmax(probability)
         max_prob = probability[0][max_prob_index]
-        
-        print(f"The speaker is: {speaker_name[0]} with a probability of {max_prob*100:.2f}%")
+
+        print(f"The speaker is: {speaker_name[0]} with a probability of {max_prob * 100:.2f}%")
 
         return speaker_name, probability
 
-if __name__ == "__main__":
 
-    features = extract_features_asyncronous("audio_files_wav/Bryn Roberts/eventsof1848_01_milnes_64kb.wav" , 10)
-    
+if __name__ == "__main__":
+    features = extract_features_asyncronous("audio_files_wav/Bryn Roberts/eventsof1848_01_milnes_64kb.wav", 10)
+
     print(type(features))
     print(features)
 
