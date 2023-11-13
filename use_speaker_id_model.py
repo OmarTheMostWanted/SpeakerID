@@ -1,4 +1,4 @@
-import MultiThreadSpeakerIDWithUI as sid
+import multi_thread_speaker_id as sid
 
 model, le = sid.load_model("model.pkl", "label_encoder.pkl")
 
