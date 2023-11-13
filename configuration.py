@@ -55,6 +55,11 @@ def create_config() -> None:
 
     # Add default values
     config.add_section('Paths')
+    config.set('Paths', 'Raw Files', '')
+    config.set('Paths', 'Wav Files', '')
+    config.set('Paths', 'Balanced Files', '')
+    config.set('Paths', 'Normalized Files', '')
+    config.set('Paths', 'Deionised Files', '')
     config.set('Paths', 'Training Data', '')
     config.set('Paths', 'Models', '')
 
