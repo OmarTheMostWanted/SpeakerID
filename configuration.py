@@ -62,6 +62,7 @@ def create_config() -> None:
     config.set('Paths', 'Deionised Files', '')
     config.set('Paths', 'Training Data', '')
     config.set('Paths', 'Models', '')
+    config.set("Paths", "data cache", "")
 
     # Add default values
     config.add_section('Logging')
