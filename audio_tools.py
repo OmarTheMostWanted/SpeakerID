@@ -1,6 +1,6 @@
 import os
 import concurrent.futures
-
+import warnings
 import numpy
 from pydub import AudioSegment
 from tqdm import tqdm
@@ -9,16 +9,16 @@ import noisereduce as nr
 from scipy.io import wavfile
 
 
-def convert_file_to_wav(audio_path: str, wav_path: str, audio_format: str) -> None:
-    # Convert audio to wav
-    if audio_format == 'mp3':
-        audio = AudioSegment.from_mp3(audio_path)
-    elif audio_format == 'm4a':
-        audio = AudioSegment.from_file(audio_path, format='m4a')
-    else:
-        print("Unsupported format")
+def convert_file_to_wav(audio_path: str, wav_path: str, replace: bool = False) -> None:
+    if not replace and os.path.exists(wav_path):
         return
-    audio.export(wav_path, format='wav')
+
+    # Convert audio to wav
+    try:
+        audio = AudioSegment.from_file(audio_path, format='m4a')
+        audio.export(wav_path, format='wav')
+    except Exception as e:
+        print(f"Error reading audio file: {e}")
 
 
 def convert_to_wav_multi_thread(threads: int = 4, use_conf: bool = True, input_dir: str = None,
@@ -48,13 +48,11 @@ def convert_to_wav_multi_thread(threads: int = 4, use_conf: bool = True, input_d
                     os.makedirs(os.path.dirname(wav_path), exist_ok=True)
 
                     # Submit a new task to the thread pool
-                    if file.endswith('.mp3'):
-                        futures.append(executor.submit(convert_file_to_wav, audio_path, wav_path, 'mp3'))
-                    elif file.endswith('.m4a'):
-                        futures.append(executor.submit(convert_file_to_wav, audio_path, wav_path, 'm4a'))
+                    futures.append(executor.submit(convert_file_to_wav, audio_path, wav_path, False))
 
         # Add progress bar using tqdm
-        for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), dynamic_ncols=True, desc="Converting files to wav"):
+        for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), dynamic_ncols=True,
+                           desc="Converting files to wav"):
             try:
                 future.result()
             except Exception as e:
@@ -74,23 +72,24 @@ def get_audio_files_duration(audio_dir: str) -> (dict[str, float], float):
             audio_file_duration = audio_file.duration_seconds
             total_duration += audio_file_duration
             audio_duration[file] = audio_file_duration
+        else:
+            warnings.warn(f"{file} is not wav and it has been ignored")
     return audio_duration, total_duration
 
 
-def select_audio_files(speaker_dir: dict[str, float], target_duration: float) -> [str]:
+def select_audio_files(speaker_dir: dict[str, float], target_duration: float) -> ([str], [str]):
     """Select audio files for a speaker to match the target duration."""
     sorted_map = dict(sorted(speaker_dir.items(), key=lambda item: item[1], reverse=True))
     selected_files = []
+    unused_files = []
     selected_duration = 0.0
     for audio_file, file_duration in sorted_map.items():
         if selected_duration + file_duration <= target_duration:
             selected_files.append(audio_file)
             selected_duration += file_duration
-
-        if selected_duration > target_duration:
-            break
-    # print(f"Selected {len(selected_files)} files with total duration {selected_duration} seconds.")
-    return selected_files
+        else:
+            unused_files.append(audio_file)
+    return selected_files, unused_files
 
 
 class Speaker:
@@ -99,7 +98,6 @@ class Speaker:
     Speaker_Audio_Files: dict[str, float]
 
     def __init__(self, speaker_path):
-        # Instance variables
         self.Speaker_Path = speaker_path
         self.Speaker_Audio_Files, self.Speaker_Total_Duration = get_audio_files_duration(speaker_path)
 
@@ -107,42 +105,12 @@ class Speaker:
 class TrainingData:
     Speaker_Name: str
     Speaker_Files: [str]
+    Unused_Files: [str]
 
-    def __init__(self, speaker_dir_path, speaker_files):
-        # Instance variables
+    def __init__(self, speaker_dir_path, speaker_files, unused_files):
         self.Speaker_Name = os.path.basename(speaker_dir_path)
         self.Speaker_Files = speaker_files
-
-
-def balance_audio():
-    import configuration
-
-    config = configuration.read_config()
-
-    root_dir = config["Paths"]["training data"]
-
-    speakers: [Speaker] = []
-
-    speaker_dirs = [os.path.join(root_dir, d) for d in os.listdir(root_dir) if
-                    os.path.isdir(os.path.join(root_dir, d))]
-
-    for speaker_dir in tqdm(speaker_dirs, colour="green", dynamic_ncols=True,
-                            desc="Calculating total audio duration for each speaker."):
-        speakers.append(Speaker(speaker_dir))
-
-    speaker_with_min_duration = min(speakers, key=lambda speaker: speaker.Speaker_Total_Duration)
-
-    print(f"Target duration for each speaker: {round(speaker_with_min_duration.Speaker_Total_Duration, 1)} seconds.")
-
-    speaker_data: [TrainingData] = []
-
-    for speaker in tqdm(speakers, colour="blue", dynamic_ncols=True, desc="Balancing audio data for all speakers."):
-        selected_files = select_audio_files(speaker.Speaker_Audio_Files,
-                                            speaker_with_min_duration.Speaker_Total_Duration)
-        speaker_data.append(TrainingData(speaker.Speaker_Path, selected_files))
-
-    print("Selection completed.")
-    return speaker_data
+        self.Unused_Files = unused_files
 
 
 def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, root_dir: str = None,
@@ -159,8 +127,8 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, root_dir
     elif root_dir is None or out_put_dir is None:
         raise Exception("Provide a directory or use config")
 
-    def create_speaker(speaker_dir: str) -> Speaker:
-        return Speaker(speaker_dir)
+    def create_speaker(speaker_dir_a: str) -> Speaker:
+        return Speaker(speaker_dir_a)
 
     speakers: [Speaker] = []
 
@@ -174,7 +142,8 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, root_dir
         for speaker_dir in speaker_dirs:
             speaker_futures.append(executor.submit(create_speaker, speaker_dir))
         # speakers = list(executor.map(create_speaker, speaker_dirs))
-        for future in tqdm(concurrent.futures.as_completed(speaker_futures), total=len(speaker_futures), colour="MAGENTA", dynamic_ncols=True,
+        for future in tqdm(concurrent.futures.as_completed(speaker_futures), total=len(speaker_futures),
+                           colour="MAGENTA", dynamic_ncols=True,
                            desc=f"Balancing audio files"):
             try:
                 speakers.append(future.result())
@@ -185,10 +154,9 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, root_dir
 
     print(f"Target duration for each speaker: {round(speaker_with_min_duration.Speaker_Total_Duration, 2)} seconds.")
 
-    def create_training_data(s: Speaker) -> TrainingData:
-        sf = select_audio_files(s.Speaker_Audio_Files,
-                                speaker_with_min_duration.Speaker_Total_Duration)
-        return TrainingData(s.Speaker_Path, sf)
+    def create_training_data(speaker_a: Speaker) -> TrainingData:
+        sf, unused = select_audio_files(speaker_a.Speaker_Audio_Files, speaker_with_min_duration.Speaker_Total_Duration)
+        return TrainingData(speaker_a.Speaker_Path, sf, unused)
 
     speaker_data: [TrainingData]
 
@@ -198,9 +166,6 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, root_dir
     res = []
     for s in speaker_data:
         res.append((s.Speaker_Name, len(s.Speaker_Files)))
-
-    for re in res:
-        print(f"Selection completed: {re}")
 
     if out_put_dir is not None:
         if not os.path.exists(out_put_dir):
@@ -216,12 +181,19 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, root_dir
             with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
                 speaker_data = list(executor.map(create_training_data, speakers))
                 for file in td.Speaker_Files:
-                    source = os.path.join(root_dir, td.Speaker_Name, file)
-                    dist = os.path.join(out_put_dir, td.Speaker_Name, file[:-4] + "_balanced.wav")
+                    source: str = os.path.join(root_dir, td.Speaker_Name, file)
+                    dist: str = os.path.join(out_put_dir, td.Speaker_Name, file[:-4] + "_balanced.wav")
                     futures.append(executor.submit(shutil.copy, source, dist))
 
-                for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), colour="32cd32", dynamic_ncols=True,
-                                   desc=f"Copying balanced audio files of {td.Speaker_Name}"):
+                os.makedirs(os.path.join(out_put_dir, "unused"), exist_ok=True)
+
+                for file in td.Unused_Files:
+                    source = os.path.join(root_dir, td.Speaker_Name, file)
+                    dist = os.path.join(out_put_dir, "unused", td.Speaker_Name, file[:-4] + "_unused.wav")
+                    futures.append(executor.submit(shutil.copy, source, dist))
+
+                for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), colour="32cd32",
+                                   dynamic_ncols=True, desc=f"Copying balanced audio files of {td.Speaker_Name}"):
                     try:
                         future.result()
                     except Exception as e:
@@ -230,7 +202,7 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, root_dir
     return speaker_data
 
 
-def normalize_file(input_path: str, out_put_dir: str, target_amplitude: float) -> None:
+def normalize_file(input_path: str, out_put_dir: str = None, target_amplitude: float = 20):
     audio = AudioSegment.from_file(input_path)
 
     # Calculate the difference in dB between the target amplitude and the current amplitude
@@ -243,8 +215,11 @@ def normalize_file(input_path: str, out_put_dir: str, target_amplitude: float) -
     if normalized_audio.max_dBFS > 0:
         print(f"Warning: Clipping occurred in {input_path}")
 
-    # Export the normalized audio to the output path
-    normalized_audio.export(out_put_dir, format="wav")
+    if out_put_dir is not None:
+        # Export the normalized audio to the output path
+        normalized_audio.export(out_put_dir, format="wav")
+
+    return normalized_audio
 
 
 def calculate_average_amplitude(directory: str) -> float:
@@ -260,19 +235,23 @@ def calculate_average_amplitude(directory: str) -> float:
     return total_amplitude / file_count
 
 
-def normalize_audio_files_multi_thread(threads: int = 4, use_conf: bool = True, input_path: str = None, out_put_dir: str = None,
+def normalize_audio_files_multi_thread(threads: int = 4, use_conf: bool = True, input_path: str = None,
+                                       out_put_dir: str = None,
                                        target_amplitude=20.0, use_average_amplitude: bool = False):
-    if out_put_dir is not None and not os.path.exists(out_put_dir):
-        os.makedirs(out_put_dir)
 
     if use_conf:
         import configuration
         config = configuration.read_config()
         input_path = config["Paths"]["balanced files"]
         out_put_dir = config["Paths"]["normalized files"]
+        use_average_amplitude = config.getboolean("Settings", "use average amplitude")
+        target_amplitude = config.getfloat("Settings", "target amplitude")
 
     elif input_path is None or out_put_dir is None:
         raise Exception("Provide a directory or use config")
+
+    if out_put_dir is not None and not os.path.exists(out_put_dir):
+        os.makedirs(out_put_dir)
 
     if use_average_amplitude:
         amplitude_futures = []
@@ -281,9 +260,11 @@ def normalize_audio_files_multi_thread(threads: int = 4, use_conf: bool = True, 
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
             for speaker_dir in os.listdir(input_path):
-                amplitude_futures.append(executor.submit(calculate_average_amplitude, os.path.join(input_path, speaker_dir)))
+                amplitude_futures.append(
+                    executor.submit(calculate_average_amplitude, os.path.join(input_path, speaker_dir)))
 
-            for future in tqdm(concurrent.futures.as_completed(amplitude_futures), total=len(amplitude_futures), dynamic_ncols=True,
+            for future in tqdm(concurrent.futures.as_completed(amplitude_futures), total=len(amplitude_futures),
+                               dynamic_ncols=True,
                                desc="Calculating average amplitude", colour="red"):
                 try:
                     amplitudes.append(future.result())
@@ -299,7 +280,8 @@ def normalize_audio_files_multi_thread(threads: int = 4, use_conf: bool = True, 
             for file in os.listdir(os.path.join(input_path, speaker_dir)):
                 if file.endswith(".wav"):
                     audio_path = os.path.join(input_path, speaker_dir, file)
-                    normalized_path = os.path.join(out_put_dir, speaker_dir, file[:-4] + f"_normalized({round(target_amplitude, 1)}).wav")
+                    normalized_path = os.path.join(out_put_dir, speaker_dir,
+                                                   file[:-4] + f"_normalized({round(target_amplitude, 2)}).wav")
                     os.makedirs(os.path.dirname(normalized_path), exist_ok=True)
 
                     futures.append(executor.submit(normalize_file, audio_path, normalized_path, target_amplitude))
@@ -312,18 +294,45 @@ def normalize_audio_files_multi_thread(threads: int = 4, use_conf: bool = True, 
                 print(f"Exception occurred during normalizing: {e}")
 
 
-def reduce_noise(input_path: str, output_path: str) -> None:
+def reduce_noise(input_path: str, output_path: str = None, device=None, chunk_size=100000):
     # Load the audio file
     rate, data = wavfile.read(input_path)
 
+    # Reduce noise, For AMD GPUs, you can use libraries like ROCm or numba with ROCm support.
+    # Size of signal chunks to reduce noise over. Larger sizes will take more space in memory, smaller sizes can take
+    # longer to compute.
+    reduced_noise = nr.reduce_noise(y=data, sr=rate, prop_decrease=1.0, chunk_size=chunk_size, device=device)
+
+    if output_path is not None:
+        # Save the result
+        wavfile.write(output_path, rate, reduced_noise)
+
+    return reduced_noise
+
+
+def reduce_noise_librosa(input_path: str, output_path: str = None, device=None, chunk_size=100000):
+    import librosa
+    import numpy as np
+
+    # Load the audio file using librosa
+    data, rate = librosa.load(input_path, sr=None)
+
+    # Ensure the audio data is in the correct format for noise reduction
+    data = np.asfortranarray(data)
+
     # Reduce noise
-    reduced_noise = nr.reduce_noise(y=data, sr=rate)
+    reduced_noise = nr.reduce_noise(y=data, sr=rate, prop_decrease=1.0, chunk_size=chunk_size,
+                                    device=device)
 
-    # Save the result
-    wavfile.write(output_path, rate, reduced_noise)
+    if output_path is not None:
+        # Save the result using librosa
+        librosa.output.write_wav(output_path, reduced_noise, rate)
+
+    return reduced_noise
 
 
-def reduce_noise_multi_thread(threads: int = 4, use_conf: bool = True, input_path: str = None, out_put_dir: str = None):
+def reduce_noise_multi_thread(threads: int = 4, use_conf: bool = True, input_path: str = None, out_put_dir: str = None,
+                              device=None, chunk_size=100000):
     if out_put_dir is not None and not os.path.exists(out_put_dir):
         os.makedirs(out_put_dir)
 
@@ -332,6 +341,8 @@ def reduce_noise_multi_thread(threads: int = 4, use_conf: bool = True, input_pat
         config = configuration.read_config()
         input_path = config["Paths"]["normalized files"]
         out_put_dir = config["Paths"]["deionised files"]
+        device = config["Settings"]["device"]
+        chunk_size = config["Settings"]["chunk size"]
 
     elif input_path is None or out_put_dir is None:
         raise Exception("Provide a directory or use config")
@@ -346,9 +357,10 @@ def reduce_noise_multi_thread(threads: int = 4, use_conf: bool = True, input_pat
                     denoised_path = os.path.join(out_put_dir, speaker_dir, file[:-4] + "_denoised.wav")
                     os.makedirs(os.path.dirname(denoised_path), exist_ok=True)
 
-                    futures.append(executor.submit(reduce_noise, audio_path, denoised_path))
+                    futures.append(executor.submit(reduce_noise, audio_path, denoised_path, device, chunk_size))
 
-        for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), dynamic_ncols=True, desc="Denoising audio files", colour="Blue"):
+        for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), dynamic_ncols=True,
+                           desc="Denoising audio files", colour="Blue"):
             try:
                 future.result()
             except Exception as e:
