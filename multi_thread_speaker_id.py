@@ -246,8 +246,12 @@ def predict_speaker_with_probability(model, le, threads=0):
             print("only wav files are supported")
             continue
 
+        import audio_tools as at
+        at.normalize_file()
+
         audio, sample_rate = librosa.load(audio_file_path)
         features = extract_spec_contrast_features(audio, sample_rate)
+
         speaker_id = model.predict([features])
         speaker_name = le.inverse_transform(speaker_id)
 
@@ -314,6 +318,7 @@ def train(features: [str], threads=4) -> str:
 
 
 if __name__ == "__main__":
-    model, le, accuracy = train(["contrast"])
+    model, le = load_model("/home/tmw/Code/SpeakerID", "model_100.0_.pkl" , "label_encoder_100.0_.pkl")
+
 
     predict_speaker_with_probability(model, le)

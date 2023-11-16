@@ -15,7 +15,7 @@ def convert_file_to_wav(audio_path: str, wav_path: str, replace: bool = False) -
 
     # Convert audio to wav
     try:
-        audio = AudioSegment.from_file(audio_path, format='m4a')
+        audio = AudioSegment.from_file(audio_path)
         audio.export(wav_path, format='wav')
     except Exception as e:
         print(f"Error reading audio file: {e}")
@@ -185,7 +185,7 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, root_dir
                     dist: str = os.path.join(out_put_dir, td.Speaker_Name, file[:-4] + "_balanced.wav")
                     futures.append(executor.submit(shutil.copy, source, dist))
 
-                os.makedirs(os.path.join(out_put_dir, "unused"), exist_ok=True)
+                os.makedirs(os.path.join(out_put_dir, "unused", td.Speaker_Name), exist_ok=True)
 
                 for file in td.Unused_Files:
                     source = os.path.join(root_dir, td.Speaker_Name, file)
@@ -238,7 +238,6 @@ def calculate_average_amplitude(directory: str) -> float:
 def normalize_audio_files_multi_thread(threads: int = 4, use_conf: bool = True, input_path: str = None,
                                        out_put_dir: str = None,
                                        target_amplitude=20.0, use_average_amplitude: bool = False):
-
     if use_conf:
         import configuration
         config = configuration.read_config()
@@ -342,7 +341,7 @@ def reduce_noise_multi_thread(threads: int = 4, use_conf: bool = True, input_pat
         input_path = config["Paths"]["normalized files"]
         out_put_dir = config["Paths"]["deionised files"]
         device = config["Settings"]["device"]
-        chunk_size = config["Settings"]["chunk size"]
+        chunk_size = config.getint("Settings", "chunk size")
 
     elif input_path is None or out_put_dir is None:
         raise Exception("Provide a directory or use config")
@@ -370,10 +369,10 @@ def reduce_noise_multi_thread(threads: int = 4, use_conf: bool = True, input_pat
 if __name__ == '__main__':
 
     if len(sys.argv) == 1:
-        convert_to_wav_multi_thread(use_conf=True, threads=15)
-        training_data = balance_audio_multi_thread(use_conf=True, threads=15)
-        normalize_audio_files_multi_thread(use_conf=True, threads=15, use_average_amplitude=True)
-        reduce_noise_multi_thread(threads=15, use_conf=True)
+        # convert_to_wav_multi_thread(use_conf=True, threads=15)
+        # training_data = balance_audio_multi_thread(use_conf=True, threads=15)
+        # normalize_audio_files_multi_thread(use_conf=True, threads=15, use_average_amplitude=True)
+        reduce_noise_multi_thread(threads=4, use_conf=True)
 
     elif len(sys.argv) == 4 and sys.argv[1] == 'convert':
         convert_to_wav_multi_thread(input_dir=sys.argv[2], output_dir=sys.argv[3], use_conf=False)
