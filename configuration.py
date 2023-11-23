@@ -86,9 +86,15 @@ def create_config() -> None:
 
     config.add_section('Database')
     config.set('Database', 'Server', '')  # string
-    config.set('Database', 'Database Name', '')  # string
-    config.set('Database', 'User Name', '')  # string
+    config.set('Database', 'Database', '')  # string
+    config.set('Database', 'User', '')  # string
     config.set('Database', 'Password', '')  # string
+
+    config.add_section('DatabaseDebug')
+    config.set('DatabaseDebug', 'Server', '')  # string
+    config.set('DatabaseDebug', 'Database', '')  # string
+    config.set('DatabaseDebug', 'User', '')  # string
+    config.set('DatabaseDebug', 'Password', '')  # string
 
     # Writing configuration to a file
     with open('config.ini', 'w') as configfile:
@@ -199,5 +205,6 @@ def get_config_instance_dynamic():
 
 if __name__ == "__main__":
     source_code = generate_config_class2()
-    print(source_code)
+    with open("Config.py", 'a') as file:
+            file.write(source_code)
 

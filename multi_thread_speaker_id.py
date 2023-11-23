@@ -406,6 +406,9 @@ def predict_speaker_with_probability(model, le, threads=0):
         max_prob_index = np.argmax(probability)
         max_prob = probability[0][max_prob_index]
 
+        os.remove("temp_normalized.wav")
+        os.remove("temp_normalized_denoised.wav")
+
         print(
             f"The speaker is: {speaker_name[0]} with a probability of {max_prob * 100:.2f}%"
         )
