@@ -1,9 +1,6 @@
-import sys
-
-test_dir = "/home/tmw/Code/ML-Data/test dir"
-
-mp3_file = "/home/tmw/Code/ML-Data/test dir/antietambattle_02_tilberg_64kb.mp3"
-
 import audio_tools as at
+import multi_thread_speaker_id as sid
 
+model, le = sid.load_model("/home/tmw/Code/SpeakerID", "/home/tmw/Code/SpeakerID/model_100.0_.pkl", "label_encoder_100.0_.pkl")
 
+sid.predict_speaker_with_probability(model, le)

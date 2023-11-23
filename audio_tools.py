@@ -39,16 +39,15 @@ def convert_to_wav_multi_thread(threads: int = 4, use_conf: bool = True, input_d
     with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
         for root, dirs, files in os.walk(input_dir):
             for file in files:
-                if file.endswith('.mp3') or file.endswith('.m4a'):
-                    audio_path = os.path.join(root, file)
-                    rel_root = os.path.relpath(root, input_dir)
-                    wav_path = os.path.join(output_dir, rel_root, file[:-4] + '.wav')
+                audio_path = os.path.join(root, file)
+                rel_root = os.path.relpath(root, input_dir)
+                wav_path = os.path.join(output_dir, rel_root, file[:-4] + '.wav')
 
-                    # Create new directories in output_dir as necessary
-                    os.makedirs(os.path.dirname(wav_path), exist_ok=True)
+                # Create new directories in output_dir as necessary
+                os.makedirs(os.path.dirname(wav_path), exist_ok=True)
 
-                    # Submit a new task to the thread pool
-                    futures.append(executor.submit(convert_file_to_wav, audio_path, wav_path, False))
+                # Submit a new task to the thread pool
+                futures.append(executor.submit(convert_file_to_wav, audio_path, wav_path, False))
 
         # Add progress bar using tqdm
         for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), dynamic_ncols=True,

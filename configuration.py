@@ -55,26 +55,40 @@ def create_config() -> None:
 
     # Add default values
     config.add_section('Paths')
-    config.set('Paths', 'Raw Files', '')
-    config.set('Paths', 'Wav Files', '')
-    config.set('Paths', 'Balanced Files', '')
-    config.set('Paths', 'Normalized Files', '')
-    config.set('Paths', 'Deionised Files', '')
-    config.set('Paths', 'Training Data', '')
-    config.set('Paths', 'Models', '')
-    config.set("Paths", "data cache", "")
+    config.set('Paths', 'Raw Files', '')  # string
+    config.set('Paths', 'Wav Files', '')  # string
+    config.set('Paths', 'Balanced Files', '')  # string
+    config.set('Paths', 'Normalized Files', '')  # string
+    config.set('Paths', 'Deionised Files', '')  # string
+    config.set('Paths', 'Training Data', '')  # string
+    config.set('Paths', 'Models', '')  # string
+    config.set("Paths", "Data Cache", "")  # string
+
+    config.add_section('Settings')
+    config.set('Settings', 'N MFCC', '40')  # float
+    config.set('Settings', 'Cache Data', 'yes')  # bool
+    config.set('Settings', 'Target Amplitude', '20.0')  # float
+    config.set('Settings', 'Average Amplitude', 'yes')  # bool
+    config.set("Settings", "Device", "cuda")  # string
+    config.set("Settings", "Chunk Size", "100000")  # int
+
+    config.add_section('Features')
+    config.set('Features', 'MFCC', 'no')  # bool
+    config.set('Features', 'Chroma', 'no')  # bool
+    config.set('Features', 'Spec Contrast', 'yes')  # bool
+    config.set('Features', 'Tonnetz', 'no')  # bool
 
     # Add default values
     config.add_section('Logging')
-    config.set('Logging', 'Url', '')
-    config.set('Logging', 'Port', '')
-    config.set('Logging', 'App Name', '')
+    config.set('Logging', 'Url', '127.0.0.1')  # string
+    config.set('Logging', 'Port', '5006')  # int
+    config.set('Logging', 'App Name', 'App')  # string
 
     config.add_section('Database')
-    config.set('Database', 'Server', '')
-    config.set('Database', 'Database Name', '')
-    config.set('Database', 'User Name', '')
-    config.set('Database', 'Password', '')
+    config.set('Database', 'Server', '')  # string
+    config.set('Database', 'Database Name', '')  # string
+    config.set('Database', 'User Name', '')  # string
+    config.set('Database', 'Password', '')  # string
 
     # Writing configuration to a file
     with open('config.ini', 'w') as configfile:
@@ -99,5 +113,91 @@ def read_config() -> configparser.ConfigParser:
         exit()
 
 
+class Config:
+    def __init__(self, config):
+        for section in config.sections():
+            setattr(self, section, self.Section(config, section))
+
+    class Section:
+        def __init__(self, config, section):
+            self.__dict__.update(config[section])
+
+
+
+def generate_config_class():
+    # Read the config file
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+
+    # Start the class definition
+    class_def = "class Config:\n"
+
+    # For each section in the config file
+    for section in config.sections():
+        # Start a subclass definition
+        class_def += f"    class {section}:\n"
+
+        # For each key in the section
+        for key, value in config[section].items():
+            # Add an attribute to the subclass
+            if value.isdigit():
+                class_def += f"        {key}: int = {value}\n"
+            elif value.replace('.', '', 1).isdigit():
+                class_def += f"        {key}: float = {value}\n"
+            elif value.lower() in ['true', 'false']:
+                class_def += f"        {key}: bool = {value.lower() == 'true'}\n"
+            else:
+                class_def += f"        {key}: str = '{value}'\n"
+
+    # Return the class definition
+    return class_def
+
+def generate_config_class2() -> str:
+    # Create the config
+    create_config()
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+
+    # Start generating the Config class
+    class_code = "class Config:\n"
+    for section in config.sections():
+        class_code += f"    class {section}:\n"
+        for key, value in config.items(section):
+            if value.isdigit():
+                class_code += f"        {key}: int = {value}\n"
+            elif value.replace('.', '', 1).isdigit():
+                class_code += f"        {key}: float = {value}\n"
+            elif value.lower() in ['yes', 'no']:
+                class_code += f"        {key}: bool = {'True' if value.lower() == 'yes' else 'False'}\n"
+            else:
+                class_code += f"        {key}: str = '{value}'\n"
+    return class_code
+
+
+def create_config_instance(config_class_str: str):
+    # Execute the source code to define the Config class
+    exec(config_class_str)
+
+    # Create an instance of the Config class
+    config_instance = Config()
+
+    # Read the values from the config.ini file
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+
+    # Assign the values to the corresponding attributes in the Config instance
+    for section in config.sections():
+        for key, value in config.items(section):
+            setattr(getattr(config_instance, section), key, value)
+
+    return config_instance
+
+
+def get_config_instance_dynamic():
+    return Config(read_config())
+
+
 if __name__ == "__main__":
-    read_config()
+    source_code = generate_config_class2()
+    print(source_code)
+
