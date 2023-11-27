@@ -59,18 +59,22 @@ def create_config() -> None:
     config.set('Paths', 'Wav Files', '')  # string
     config.set('Paths', 'Balanced Files', '')  # string
     config.set('Paths', 'Normalized Files', '')  # string
-    config.set('Paths', 'Deionised Files', '')  # string
+    config.set('Paths', 'Denoised Files', '')  # string
     config.set('Paths', 'Training Data', '')  # string
     config.set('Paths', 'Models', '')  # string
-    config.set("Paths", "Data Cache", "")  # string
+    config.set("Paths", "Feature Data", "")  # string
 
     config.add_section('Settings')
+    config.set('Settings', 'Convert To wav', 'yes')  # bool
+    config.set('Settings', 'Balance', 'yes')  # bool
+    config.set('Settings', 'Normalize', 'yes')  # bool
+    config.set('Settings', 'Reduce Noise', 'yes')  # bool
     config.set('Settings', 'N MFCC', '40')  # float
-    config.set('Settings', 'Cache Data', 'yes')  # bool
     config.set('Settings', 'Target Amplitude', '20.0')  # float
     config.set('Settings', 'Average Amplitude', 'yes')  # bool
     config.set("Settings", "Device", "cuda")  # string
     config.set("Settings", "Chunk Size", "100000")  # int
+    config.set("Settings", "Overwrite Data", "no")  # bool
 
     config.add_section('Features')
     config.set('Features', 'MFCC', 'no')  # bool
