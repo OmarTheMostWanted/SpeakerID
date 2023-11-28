@@ -1,3 +1,5 @@
+import warnings
+
 import librosa.feature
 import numpy as np
 import os
@@ -107,7 +109,7 @@ def extract_file_features(file_path: str, extract_mfcc: bool = False, extract_ch
 def extract_file_features_multi_threaded(file_path: str, data_dir: str, threads=4, overwrite: bool = False, extract_mfcc: bool = False,
                                          extract_chroma: bool = False, extract_spec_contrast: bool = False, extract_tonnetz: bool = False,
                                          n_mfcc: int = 40, ) -> None:
-    af = AudioFile.AudioFile(os.path.basename(file_path), os.path.dirname(file_path))
+    af = AudioFile.AudioFile(os.path.basename(file_path[:-4]) + ".npy", os.path.dirname(file_path).split('/')[-1])
 
     if extract_mfcc:
         af.mfcc = True
@@ -178,15 +180,25 @@ def load_features(normv: float, use_config: bool = True, audio_data_dir: str = N
     for speaker in os.listdir(audio_data_dir):
         files = []
 
+        if speaker == "unused":
+            continue
+
         speaker_dir: str = os.path.join(audio_data_dir, speaker)
 
-        for file in os.listdir(speaker):
+        for file in os.listdir(os.path.join(audio_data_dir, speaker_dir)):
             if file.endswith(".npy"):
                 af = AudioFile.AudioFile(file, speaker)
 
-                if balanced == af.balanced and normalized == af.normalized and denoised == af.denoised and mfcc == af.mfcc and chroma == af.chroma and spec_contrast == af.speccontrast and tonnetz == af.tonnetz and n_mfcc == af.mfcc_val and normv == af.norm_val:
-                    files.append(np.load(os.path.join(speaker_dir, file)))
+                if balanced == af.balanced and normalized == af.normalized and denoised == af.denoised and mfcc == af.mfcc and chroma == af.chroma and spec_contrast == af.speccontrast and tonnetz == af.tonnetz:
+                    if mfcc and n_mfcc != af.mfcc_val:
+                        continue
+                    if normalized and (normv == 0 or normv != af.norm_val):
+                        continue
 
+                    files.append(np.load(os.path.join(speaker_dir, file)))
+            else:
+                warnings.warn(f"file {file} is not of type .npy and has been ignored")
+                continue
         data.extend(files)
         labels.extend([speaker] * len(files))
 
@@ -225,6 +237,10 @@ def extract_features_multi_threaded(
     futures = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
         for speaker in os.listdir(input_dir):
+
+            if speaker == "unused":
+                continue
+
             os.makedirs(os.path.join(data_dir, speaker), exist_ok=True)
 
             speaker_files = os.listdir(os.path.join(input_dir, speaker))

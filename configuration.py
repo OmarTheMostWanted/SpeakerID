@@ -70,7 +70,7 @@ def create_config() -> None:
     config.set('Settings', 'Normalize', 'yes')  # bool
     config.set('Settings', 'Reduce Noise', 'yes')  # bool
     config.set('Settings', 'N MFCC', '40')  # float
-    config.set('Settings', 'Target Amplitude', '20.0')  # float
+    config.set('Settings', 'Target Amplitude', '0.0')  # float
     config.set('Settings', 'Average Amplitude', 'yes')  # bool
     config.set("Settings", "Device", "cuda")  # string
     config.set("Settings", "Chunk Size", "100000")  # int

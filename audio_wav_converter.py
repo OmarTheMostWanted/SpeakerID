@@ -1,4 +1,5 @@
 import concurrent.futures
+import warnings
 
 from pydub import AudioSegment
 from tqdm import tqdm
@@ -14,7 +15,8 @@ def convert_file_to_wav(audio_path: str, wav_path: str, replace: bool = False) -
         audio = AudioSegment.from_file(audio_path)
         audio.export(wav_path, format='wav')
     except Exception as e:
-        print(f"Error reading audio file: {e}")
+        m = f"Error reading audio file: {os.path.basename(audio_path)}"
+        warnings.warn(m)
 
 
 def convert_to_wav_multi_thread(threads: int = 4, use_conf: bool = True, input_dir: str = None,

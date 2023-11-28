@@ -40,7 +40,7 @@ def TrainSupportVectorClassification(data, labels):
     return (model, le, accuracy)
 
 
-def save_model(model, le, accuracy: float, normv: float, speakers: [str], model_dir: str = None, use_config: bool = True, balanced: bool = False,
+def save_model(model, le, accuracy: float, normv: float, speakers: [str] = None, model_dir: str = None, use_config: bool = True, balanced: bool = False,
                normalized: bool = False,
                denoised: bool = False,
                mfcc: bool = False, chroma: bool = False, spec_contrast: bool = False,
@@ -48,10 +48,12 @@ def save_model(model, le, accuracy: float, normv: float, speakers: [str], model_
     # Save the trained model and add a progress message
     print("Saving model...")
 
+    accuracy = np.round(accuracy, 2)
+
     if use_config:
         import configuration
         config = configuration.read_config()
-
+        speakers = os.listdir(config["Paths"]["training data"])
         model_dir = config["Paths"]["models"]
         balanced = config.getboolean("Settings", "balance")
         normalized = config.getboolean("Settings", "normalize")
@@ -88,25 +90,29 @@ def save_model(model, le, accuracy: float, normv: float, speakers: [str], model_
     le_obj.tonnetz = tonnetz
     le_obj.speakers = speakers
 
-    with open(os.path.join(model_dir, model_obj.generate_model_name(), "wb")) as f:
+    os.makedirs(model_dir , exist_ok=True)
+
+    with open(os.path.join(model_dir, model_obj.generate_model_name()), "wb") as f:
         pickle.dump(model, f)
 
     # Save the label encoder and add a progress message
     print("Saving label encoder...")
-    with open(os.path.join(model_dir, le_obj.generate_le_name(), "wb")) as f:
+    with open(os.path.join(model_dir, le_obj.generate_le_name()), "wb") as f:
         pickle.dump(le, f)
 
 
-def load_model(model, le, accuracy: float, normv: float, speakers: [str], use_config: bool = True, model_dir: str = None, balanced: bool = False,
+def load_model(accuracy: float, normv: float, speakers: [str] = None, use_config: bool = True, model_dir: str = None, balanced: bool = False,
                normalized: bool = False,
                denoised: bool = False,
                mfcc: bool = False, chroma: bool = False, spec_contrast: bool = False,
                tonnetz: bool = False, n_mfcc: int = None, ):
-    # Load the trained model and add a progress message
+
+    accuracy = np.round(accuracy, 2)
 
     if use_config:
         import configuration
         config = configuration.read_config()
+        speakers = os.listdir(config["Paths"]["training data"])
         model_dir = config["Paths"]["models"]
         balanced = config.getboolean("Settings", "balance")
         normalized = config.getboolean("Settings", "normalize")
@@ -155,7 +161,7 @@ def load_model(model, le, accuracy: float, normv: float, speakers: [str], use_co
     return model, le
 
 
-def predict_speaker_with_probability(model, le, norv, threads=1):
+def predict_speaker_with_probability(model, le, norv:float, threads=1):
     print(
         "Note that, we will assume that your model was created using the settings present in the config.ini file, if the model was trained used differnt"
         " settings expect bad accurate or a crash")
@@ -174,7 +180,7 @@ def predict_speaker_with_probability(model, le, norv, threads=1):
             print("only wav files are supported")
             continue
 
-        file_name_t = file_name
+        file_name_t = audio_file_path
 
         if config.getboolean("Settings", "normalize"):
             print("normalizing file")
@@ -211,29 +217,6 @@ def predict_speaker_with_probability(model, le, norv, threads=1):
             os.remove("temp_denoised.wav")
 
         print(f"The speaker is: {speaker_name[0]} with a probability of {max_prob * 100:.2f}%")
-
-
-def save_data(data, labels):
-    # Save the data and labels for future use
-    with open("data.pkl", "wb") as f:
-        pickle.dump(data, f)
-
-    with open("labels.pkl", "wb") as f:
-        pickle.dump(labels, f)
-
-
-def load_data():
-    data = []
-    labels = []
-
-    # Load the data and labels
-    with open("data.pkl", "rb") as f:
-        data = pickle.load(f)
-
-    with open("labels.pkl", "rb") as f:
-        labels = pickle.load(f)
-
-    return data, labels
 
 
 if __name__ == "__main__":

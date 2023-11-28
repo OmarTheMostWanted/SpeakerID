@@ -8,7 +8,11 @@ from tqdm import tqdm
 
 
 def normalize_file(input_path: str, out_put_dir: str = None, target_amplitude: float = 20):
+
     audio = AudioSegment.from_file(input_path)
+
+    if os.path.exists(out_put_dir):
+        return audio
 
     # Calculate the difference in dB between the target amplitude and the current amplitude
     diff = target_amplitude - audio.dBFS
@@ -37,6 +41,9 @@ def calculate_average_amplitude(directory: str) -> float:
             total_amplitude += audio.dBFS
             file_count += 1
 
+    if file_count == 0:
+        warnings.warn(f"File count was 0 while calculating average amplitude in directory {directory}")
+        return 0
     return total_amplitude / file_count
 
 
@@ -76,6 +83,10 @@ def normalize_audio_files_multi_thread(threads: int = 4, use_conf: bool = True, 
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
             for speaker_dir in os.listdir(input_dir):
+
+                if speaker_dir == "unused":
+                    continue
+
                 amplitude_futures.append(
                     executor.submit(calculate_average_amplitude, os.path.join(input_dir, speaker_dir)))
 

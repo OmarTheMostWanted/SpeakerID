@@ -9,6 +9,9 @@ def reduce_noise(input_path: str, output_path: str = None, device=None, chunk_si
     # Load the audio file
     rate, data = wavfile.read(input_path)
 
+    if os.path.exists(output_path):
+        return rate , data
+
     # Reduce noise, For AMD GPUs, you can use libraries like ROCm or numba with ROCm support.
     # Size of signal chunks to reduce noise over. Larger sizes will take more space in memory, smaller sizes can take
     # longer to compute.
@@ -18,7 +21,7 @@ def reduce_noise(input_path: str, output_path: str = None, device=None, chunk_si
         # Save the result
         wavfile.write(output_path, rate, reduced_noise)
 
-    return reduced_noise
+    return rate, reduced_noise
 
 
 def reduce_noise_librosa(input_path: str, output_path: str = None, device=None, chunk_size=100000):
@@ -62,7 +65,7 @@ def reduce_noise_multi_thread(threads: int = 4, use_conf: bool = True, input_dir
         else:
             input_dir = config["Paths"]["raw files"]
 
-        out_put_dir = config["Paths"]["deionised files"]
+        out_put_dir = config["Paths"]["denoised files"]
         device = config["Settings"]["device"]
         chunk_size = config.getint("Settings", "chunk size")
 
@@ -73,6 +76,10 @@ def reduce_noise_multi_thread(threads: int = 4, use_conf: bool = True, input_dir
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
         for speaker_dir in os.listdir(input_dir):
+
+            if speaker_dir == "unused":
+                break
+
             for file in os.listdir(os.path.join(input_dir, speaker_dir)):
                 if file.endswith(".wav"):
                     audio_path = os.path.join(input_dir, speaker_dir, file)

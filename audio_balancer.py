@@ -97,7 +97,7 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_di
             speaker_futures.append(executor.submit(create_speaker, speaker_dir))
         # speakers = list(executor.map(create_speaker, speaker_dirs))
         for future in tqdm(concurrent.futures.as_completed(speaker_futures), total=len(speaker_futures),
-                           colour="MAGENTA", dynamic_ncols=True,
+                           colour="#ff69b4", dynamic_ncols=True,
                            desc=f"Balancing audio files"):
             try:
                 speakers.append(future.result())
@@ -137,14 +137,16 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_di
                 for file in td.Speaker_Files:
                     source: str = os.path.join(input_dir, td.Speaker_Name, file)
                     dist: str = os.path.join(out_put_dir, td.Speaker_Name, file[:-4] + "_balanced.wav")
-                    futures.append(executor.submit(shutil.copy, source, dist))
+                    if not os.path.exists(dist):
+                        futures.append(executor.submit(shutil.copy, source, dist))
 
                 os.makedirs(os.path.join(out_put_dir, "unused", td.Speaker_Name), exist_ok=True)
 
                 for file in td.Unused_Files:
                     source = os.path.join(input_dir, td.Speaker_Name, file)
                     dist = os.path.join(out_put_dir, "unused", td.Speaker_Name, file[:-4] + "_unused.wav")
-                    futures.append(executor.submit(shutil.copy, source, dist))
+                    if not os.path.exists(dist):
+                        futures.append(executor.submit(shutil.copy, source, dist))
 
                 for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), colour="#32cd32",
                                    dynamic_ncols=True, desc=f"Copying balanced audio files of {td.Speaker_Name}"):
