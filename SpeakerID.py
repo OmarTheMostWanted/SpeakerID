@@ -14,7 +14,7 @@ aw.convert_to_wav_multi_thread(threads=8)
 ab.balance_audio_multi_thread(threads=8)
 amplitude = an.normalize_audio_files_multi_thread(threads=8)
 anr.reduce_noise_multi_thread(threads=6)
-afe.extract_features_multi_threaded(threads=6)
+afe.extract_features_multi_threaded(threads=4)
 data, labels = afe.load_features(amplitude)
 
 model, le, accuracy = sid.TrainSupportVectorClassification(data, labels)
