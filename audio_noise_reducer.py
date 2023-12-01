@@ -20,6 +20,7 @@ def reduce_noise(input_path: str, output_path: str = None, device=None, chunk_si
     # longer to compute.
 
     with warnings.catch_warnings(record=True) as w:
+        warnings.filterwarnings("ignore", category=RuntimeWarning)
         reduced_noise = nr.reduce_noise(y=data, sr=rate, prop_decrease=1.0, chunk_size=chunk_size, device=device)
 
         if output_path is not None:

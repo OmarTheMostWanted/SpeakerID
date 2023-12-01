@@ -22,17 +22,17 @@ amplitude = -27.35
 # extract_spec_contrast = config.getboolean("Features", "spec contrast")
 # extract_tonnetz = config.getboolean("Features", "tonnetz")
 
-# aw.convert_to_wav_multi_thread(threads=8)
+aw.convert_to_wav_multi_thread(threads=8)
 selected = ab.balance_audio_multi_thread(threads=8)
 amplitude = an.normalize_audio_files_multi_thread(threads=8, selected=selected)
 anr.reduce_noise_multi_thread(threads=6, selected=selected)
 afe.extract_features_multi_threaded(threads=2, selected=selected)
-# data, labels = afe.load_features(amplitude,selected=selected)
-#
-# model, le, accuracy = sid.TrainSupportVectorClassification(data, labels)
-#
-# sid.save_model(model, le, accuracy, amplitude)
-#
-# model, le = sid.load_model(accuracy, amplitude)
-#
-# sid.predict_speaker_with_probability(model, le, amplitude, 4)
+data, labels = afe.load_features(amplitude)
+
+model, le, accuracy = sid.TrainSupportVectorClassification(data, labels)
+
+sid.save_model(model, le, accuracy, amplitude)
+
+model, le = sid.load_model(accuracy, amplitude)
+
+sid.predict_speaker_with_probability(model, le, amplitude, 4)

@@ -31,6 +31,9 @@ def load_features(normv: float, use_config: bool = True, audio_data_dir: str = N
         tonnetz = config.getboolean("Features", "tonnetz")
         n_mfcc = config.getint("Settings", "n mfcc")
 
+        if not config.getboolean("Settings", "average amplitude"):
+            normv = config.getfloat("Settings", "target amplitude")
+
     if not selected:
         # Iterate over all speakers (directories) in the root directory
         for speaker in os.listdir(audio_data_dir):
@@ -48,7 +51,7 @@ def load_features(normv: float, use_config: bool = True, audio_data_dir: str = N
                     if balanced == af.balanced and normalized == af.normalized and denoised == af.denoised and mfcc == af.mfcc and chroma == af.chroma and spec_contrast == af.speccontrast and tonnetz == af.tonnetz:
                         if mfcc and n_mfcc != af.mfcc_val:
                             continue
-                        if normalized and (normv == 0 or normv != af.norm_val):
+                        if normalized and (np.round(normv, 2) != af.norm_val):
                             continue
 
                         files.append(np.load(os.path.join(speaker_dir, file)))
@@ -71,7 +74,7 @@ def load_features(normv: float, use_config: bool = True, audio_data_dir: str = N
 
             for file in selected.get(speaker).Speaker_Files:
 
-                af = AudioFile.AudioFile(file, speaker)
+                af = AudioFile.AudioFile(file[:-4] + ".npy", speaker)
 
                 if mfcc:
                     af.mfcc = True
@@ -84,15 +87,13 @@ def load_features(normv: float, use_config: bool = True, audio_data_dir: str = N
                 data_path = os.path.join(audio_data_dir, af.speaker_name, af.generate_filename())
 
                 if os.path.exists(data_path):
-                    af = AudioFile.AudioFile(file, speaker)
-
                     if balanced == af.balanced and normalized == af.normalized and denoised == af.denoised and mfcc == af.mfcc and chroma == af.chroma and spec_contrast == af.speccontrast and tonnetz == af.tonnetz:
                         if mfcc and n_mfcc != af.mfcc_val:
                             continue
-                        if normalized and (normv == 0 or normv != af.norm_val):
+                        if normalized and ( np.round(normv, 2) != af.norm_val):
                             continue
 
-                        files.append(np.load(os.path.join(speaker_dir, file)))
+                        files.append(np.load(data_path))
                 else:
                     m = f"Data file for {file} was not found and it has been skipped"
                     warnings.warn(m)
