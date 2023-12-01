@@ -7,9 +7,8 @@ import audio_normalizer as an
 import audio_noise_reducer as anr
 import audio_feature_extraction as afe
 import multi_thread_speaker_id as sid
+import audio_remove_silence as ars
 import configuration
-
-
 
 # config = configuration.read_config()
 # input_dir = config["Paths"]["training data"]
@@ -23,11 +22,12 @@ import configuration
 # extract_tonnetz = config.getboolean("Features", "tonnetz")
 
 aw.convert_to_wav_multi_thread(threads=8)
+ars.remove_silence_multi_thread(threads=8)
 selected = ab.balance_audio_multi_thread(threads=8)
 anr.reduce_noise_multi_thread(threads=6, selected=selected)
 amplitude = an.normalize_audio_files_multi_thread(threads=8, selected=selected)
-afe.extract_features_multi_threaded(threads=2 , selected=selected)
-data, labels = afe.load_features(-26 , selected=selected)
+afe.extract_features_multi_threaded(threads=2, selected=selected)
+data, labels = afe.load_features(-26, selected=selected)
 #
 model, le, accuracy = sid.TrainSupportVectorClassification(data, labels)
 

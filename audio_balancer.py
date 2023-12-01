@@ -71,8 +71,9 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_di
         if not config.getboolean("Settings", "Balance"):
             print("Balancing is disabled in the configuration file, so this step has been skipped")
             return
-
-        if config.getboolean("Settings", "Convert to wav"):
+        if config.getboolean("Settings", "Remove Silence"):
+            input_dir = config["Paths"]["remove silence files"]
+        elif config.getboolean("Settings", "Convert to wav"):
             input_dir = config["Paths"]["wav files"]
         else:
             input_dir = config["Paths"]["raw files"]

@@ -12,15 +12,17 @@ class AudioFile:
         self.denoised: bool = False
         self.norm_val: float = 0.0
         self.normalized: bool = False
+        self.desilenced: bool = False
         self.balanced: bool = False
         self.filename = filename
         self.parse_filename()
 
     def parse_filename_old(self) -> None:
-        pattern = r'(?P<filename>.*?)_(?P<balanced>balanced)?_?(?P<normalized>normalized\((?P<norm_val>-?\d+(\.\d+)?)\))?_?(?P<denoised>denoised)?_?(?P<mfcc>mfcc\((?P<mfcc_val>\d+)\))?_?(?P<chroma>chroma)?_?(?P<speccontrast>speccontrast)?_?(?P<tonnetz>tonnetz)?\.npy'
+        pattern = r'(?P<filename>.*?)_(?P<desilenced>desilenced)?_(?P<balanced>balanced)?_?(?P<normalized>normalized\((?P<norm_val>-?\d+(\.\d+)?)\))?_?(?P<denoised>denoised)?_?(?P<mfcc>mfcc\((?P<mfcc_val>\d+)\))?_?(?P<chroma>chroma)?_?(?P<speccontrast>speccontrast)?_?(?P<tonnetz>tonnetz)?\.npy'
         match = re.match(pattern, self.filename)
         if match:
             self.filename = match.group('filename')
+            self.desilenced = bool(match.group('desilenced'))
             self.balanced = bool(match.group('balanced'))
             self.normalized = bool(match.group('normalized'))
             self.norm_val = float(match.group('norm_val')) if match.group('norm_val') else None
@@ -34,10 +36,11 @@ class AudioFile:
             raise ValueError(f"Invalid filename format: {self.filename}")
 
     def parse_filename(self) -> None:
-        pattern = r'(?P<filename>.*?)_(?P<balanced>balanced)?_?(?P<denoised>denoised)?_?(?P<normalized>normalized\((?P<norm_val>-?\d+(\.\d+)?)\))?_?(?P<mfcc>mfcc\((?P<mfcc_val>\d+)\))?_?(?P<chroma>chroma)?_?(?P<speccontrast>speccontrast)?_?(?P<tonnetz>tonnetz)?\.npy'
+        pattern = r'(?P<filename>.*?)_(?P<desilenced>desilenced)?_(?P<balanced>balanced)?_?(?P<denoised>denoised)?_?(?P<normalized>normalized\((?P<norm_val>-?\d+(\.\d+)?)\))?_?(?P<mfcc>mfcc\((?P<mfcc_val>\d+)\))?_?(?P<chroma>chroma)?_?(?P<speccontrast>speccontrast)?_?(?P<tonnetz>tonnetz)?\.npy'
         match = re.match(pattern, self.filename)
         if match:
             self.filename = match.group('filename')
+            self.desilenced = bool(match.group('desilenced'))
             self.balanced = bool(match.group('balanced'))
             self.normalized = bool(match.group('normalized'))
             self.norm_val = float(match.group('norm_val')) if match.group('norm_val') else None
@@ -52,6 +55,8 @@ class AudioFile:
 
     def generate_filename(self) -> str:
         file_name: str = self.filename
+        if self.desilenced:
+            file_name += '_desilenced'
         if self.balanced:
             file_name += '_balanced'
         if self.denoised:

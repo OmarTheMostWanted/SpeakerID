@@ -57,6 +57,7 @@ def create_config() -> None:
     config.add_section('Paths')
     config.set('Paths', 'Raw Files', '')  # string
     config.set('Paths', 'Wav Files', '')  # string
+    config.set('Paths', 'Remove Silence Files', '')  # string
     config.set('Paths', 'Balanced Files', '')  # string
     config.set('Paths', 'Normalized Files', '')  # string
     config.set('Paths', 'Denoised Files', '')  # string
@@ -66,6 +67,7 @@ def create_config() -> None:
 
     config.add_section('Settings')
     config.set('Settings', 'Convert To wav', 'yes')  # bool
+    config.set("Settings", "Remove Silence", 'yes')  # bool
     config.set('Settings', 'Balance', 'yes')  # bool
     config.set('Settings', 'Normalize', 'yes')  # bool
     config.set('Settings', 'Reduce Noise', 'yes')  # bool
@@ -134,7 +136,6 @@ class Config:
             self.__dict__.update(config[section])
 
 
-
 def generate_config_class():
     # Read the config file
     config = configparser.ConfigParser()
@@ -162,6 +163,7 @@ def generate_config_class():
 
     # Return the class definition
     return class_def
+
 
 def generate_config_class2() -> str:
     # Create the config
@@ -211,5 +213,4 @@ def get_config_instance_dynamic():
 if __name__ == "__main__":
     source_code = generate_config_class2()
     with open("Config.py", 'a') as file:
-            file.write(source_code)
-
+        file.write(source_code)

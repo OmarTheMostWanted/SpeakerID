@@ -1,9 +1,11 @@
 import re
 
+
 class ModelFile:
     def __init__(self, model_name):
         self.accuracy: float = 0.0
         self.speakers: list = []
+        self.desilenced: bool = False
         self.balanced: bool = False
         self.normalized: bool = False
         self.norm_val: float = 0.0
@@ -16,9 +18,10 @@ class ModelFile:
         self.model_name = model_name
         self.parse_model_name()
 
-    def __init__(self,):
+    def __init__(self, ):
         self.accuracy: float = 0.0
         self.speakers: list = []
+        self.desilenced: bool = False
         self.balanced: bool = False
         self.normalized: bool = False
         self.norm_val: float = 0.0
@@ -31,11 +34,12 @@ class ModelFile:
         self.model_name = ''
 
     def parse_model_name(self) -> None:
-        pattern = r'model\((?P<accuracy>\d+\.\d+)\)\[(?P<speakers>.+?)\]_?(?P<balanced>balanced)?_?(?P<normalized>normalized\((?P<norm_val>-?\d+(\.\d+)?)\))?_?(?P<denoised>denoised)?_?(?P<mfcc>mfcc\((?P<mfcc_val>\d+)\))?_?(?P<chroma>chroma)?_?(?P<speccontrast>speccontrast)?_?(?P<tonnetz>tonnetz)?\.plk'
+        pattern = r'model\((?P<accuracy>\d+\.\d+)\)\[(?P<speakers>.+?)\]_?(?P<desilenced>desilenced)?_?(?P<balanced>balanced)?_?(?P<normalized>normalized\((?P<norm_val>-?\d+(\.\d+)?)\))?_?(?P<denoised>denoised)?_?(?P<mfcc>mfcc\((?P<mfcc_val>\d+)\))?_?(?P<chroma>chroma)?_?(?P<speccontrast>speccontrast)?_?(?P<tonnetz>tonnetz)?\.plk'
         match = re.match(pattern, self.model_name)
         if match:
             self.accuracy = float(match.group('accuracy'))
             self.speakers = [speaker.strip() for speaker in match.group('speakers').split(',')]
+            self.desilenced = bool(match.group('desilenced'))
             self.balanced = bool(match.group('balanced'))
             self.normalized = bool(match.group('normalized'))
             self.norm_val = float(match.group('norm_val')) if match.group('norm_val') else None
@@ -51,6 +55,8 @@ class ModelFile:
     def generate_model_name(self) -> str:
         model_name = f"model({self.accuracy})["
         model_name += ', '.join(self.speakers) + "]"
+        if self.desilenced:
+            model_name += '_desilenced'
         if self.balanced:
             model_name += '_balanced'
         if self.normalized:
@@ -69,10 +75,12 @@ class ModelFile:
 
         return model_name
 
+
 class LabelEncoderFile:
     def __init__(self, le_name):
         self.accuracy: float = 0.0
         self.speakers: list = []
+        self.desilenced: bool = False
         self.balanced: bool = False
         self.normalized: bool = False
         self.norm_val: float = 0.0
@@ -85,9 +93,10 @@ class LabelEncoderFile:
         self.le_name = le_name
         self.parse_model_name()
 
-    def __init__(self,):
+    def __init__(self, ):
         self.accuracy: float = 0.0
         self.speakers: list = []
+        self.desilenced: bool = False
         self.balanced: bool = False
         self.normalized: bool = False
         self.norm_val: float = 0.0
@@ -100,11 +109,12 @@ class LabelEncoderFile:
         self.le_name = ''
 
     def parse_model_name(self) -> None:
-        pattern = r'label_encoder\((?P<accuracy>\d+\.\d+)\)\[(?P<speakers>.+?)\]_?(?P<balanced>balanced)?_?(?P<denoised>denoised)?_?(?P<normalized>normalized\((?P<norm_val>-?\d+(\.\d+)?)\))?_?(?P<mfcc>mfcc\((?P<mfcc_val>\d+)\))?_?(?P<chroma>chroma)?_?(?P<speccontrast>speccontrast)?_?(?P<tonnetz>tonnetz)?\.plk'
+        pattern = r'label_encoder\((?P<accuracy>\d+\.\d+)\)\[(?P<speakers>.+?)\]_?(?P<desilenced>desilenced)?_?(?P<balanced>balanced)?_?(?P<denoised>denoised)?_?(?P<normalized>normalized\((?P<norm_val>-?\d+(\.\d+)?)\))?_?(?P<mfcc>mfcc\((?P<mfcc_val>\d+)\))?_?(?P<chroma>chroma)?_?(?P<speccontrast>speccontrast)?_?(?P<tonnetz>tonnetz)?\.plk'
         match = re.match(pattern, self.le_name)
         if match:
             self.accuracy = float(match.group('accuracy'))
             self.speakers = [speaker.strip() for speaker in match.group('speakers').split(',')]
+            self.desilenced = bool(match.group('desilenced'))
             self.balanced = bool(match.group('balanced'))
             self.normalized = bool(match.group('normalized'))
             self.norm_val = float(match.group('norm_val')) if match.group('norm_val') else None
@@ -138,6 +148,8 @@ class LabelEncoderFile:
     def generate_le_name(self) -> str:
         le_name = f"label_encoder({self.accuracy})["
         le_name += ', '.join(self.speakers) + "]"
+        if self.desilenced:
+            model_name += '_desilenced'
         if self.balanced:
             le_name += '_balanced'
         if self.denoised:

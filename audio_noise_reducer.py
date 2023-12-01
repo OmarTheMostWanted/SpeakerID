@@ -85,11 +85,12 @@ def reduce_noise_multi_thread(threads: int = 4, use_conf: bool = True, input_dir
                 if speaker_dir == "unused":
                     break
 
+                os.makedirs(os.path.join(out_put_dir, speaker_dir), exist_ok=True)
+
                 for file in os.listdir(os.path.join(input_dir, speaker_dir)):
                     if file.endswith(".wav"):
                         audio_path = os.path.join(input_dir, speaker_dir, file)
                         denoised_path = os.path.join(out_put_dir, speaker_dir, file[:-4] + "_denoised.wav")
-                        os.makedirs(os.path.dirname(denoised_path), exist_ok=True)
 
                         futures.append(executor.submit(reduce_noise, audio_path, denoised_path, device, chunk_size))
 
