@@ -11,30 +11,23 @@ import configuration
 
 amplitude = -27.35
 
-config = configuration.read_config()
-input_dir = config["Paths"]["training data"]
-data_dir = config["Paths"]["feature data"]
-over_write = config.getboolean("Settings", "overwrite data")
-
-extract_mfcc = config.getboolean("Features", "mfcc")
-nmfcc = config.getint("Settings", "N MFCC")
-extract_chroma = config.getboolean("Features", "chroma")
-extract_spec_contrast = config.getboolean("Features", "spec contrast")
-extract_tonnetz = config.getboolean("Features", "tonnetz")
-
-file = "/home/tmw/Digivox/data_denoised/20464/00185881_000_balanced_normalized(-26.89)_denoised.wav"
-
-afe.extract_file_features_multi_threaded(file, data_dir, 4, False, extract_mfcc, extract_chroma, extract_spec_contrast, extract_tonnetz, nmfcc)
-
-afe.extract_file_features_multi_threaded(file, data_dir, 4, False, extract_mfcc, extract_chroma, extract_spec_contrast, extract_tonnetz, nmfcc)
-
+# config = configuration.read_config()
+# input_dir = config["Paths"]["training data"]
+# data_dir = config["Paths"]["feature data"]
+# over_write = config.getboolean("Settings", "overwrite data")
+#
+# extract_mfcc = config.getboolean("Features", "mfcc")
+# nmfcc = config.getint("Settings", "N MFCC")
+# extract_chroma = config.getboolean("Features", "chroma")
+# extract_spec_contrast = config.getboolean("Features", "spec contrast")
+# extract_tonnetz = config.getboolean("Features", "tonnetz")
 
 # aw.convert_to_wav_multi_thread(threads=8)
-# ab.balance_audio_multi_thread(threads=8)
-# amplitude = an.normalize_audio_files_multi_thread(threads=8)
-# anr.reduce_noise_multi_thread(threads=6)
-# afe.extract_features_multi_threaded(threads=2)
-# data, labels = afe.load_features(amplitude)
+selected = ab.balance_audio_multi_thread(threads=8)
+amplitude = an.normalize_audio_files_multi_thread(threads=8, selected=selected)
+anr.reduce_noise_multi_thread(threads=6, selected=selected)
+afe.extract_features_multi_threaded(threads=2, selected=selected)
+# data, labels = afe.load_features(amplitude,selected=selected)
 #
 # model, le, accuracy = sid.TrainSupportVectorClassification(data, labels)
 #

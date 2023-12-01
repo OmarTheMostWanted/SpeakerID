@@ -8,9 +8,12 @@ import concurrent.futures
 
 import AudioFile
 
+from audio_balancer import TrainingData
+
+
 def load_features(normv: float, use_config: bool = True, audio_data_dir: str = None, balanced: bool = False, normalized: bool = False, denoised: bool = False,
                   mfcc: bool = False, chroma: bool = False, spec_contrast: bool = False,
-                  tonnetz: bool = False, n_mfcc: int = None) -> ([np.ndarray], [str]):
+                  tonnetz: bool = False, n_mfcc: int = None, selected: dict[str, TrainingData] = None) -> ([np.ndarray], [str]):
     data = []
     labels = []
 
@@ -28,37 +31,81 @@ def load_features(normv: float, use_config: bool = True, audio_data_dir: str = N
         tonnetz = config.getboolean("Features", "tonnetz")
         n_mfcc = config.getint("Settings", "n mfcc")
 
-    # Iterate over all speakers (directories) in the root directory
-    for speaker in os.listdir(audio_data_dir):
-        files = []
+    if not selected:
+        # Iterate over all speakers (directories) in the root directory
+        for speaker in os.listdir(audio_data_dir):
+            files = []
 
-        if speaker == "unused":
-            continue
+            if speaker == "unused":
+                continue
 
-        speaker_dir: str = os.path.join(audio_data_dir, speaker)
+            speaker_dir: str = os.path.join(audio_data_dir, speaker)
 
-        for file in os.listdir(os.path.join(audio_data_dir, speaker_dir)):
-            if file.endswith(".npy"):
+            for file in os.listdir(os.path.join(audio_data_dir, speaker_dir)):
+                if file.endswith(".npy"):
+                    af = AudioFile.AudioFile(file, speaker)
+
+                    if balanced == af.balanced and normalized == af.normalized and denoised == af.denoised and mfcc == af.mfcc and chroma == af.chroma and spec_contrast == af.speccontrast and tonnetz == af.tonnetz:
+                        if mfcc and n_mfcc != af.mfcc_val:
+                            continue
+                        if normalized and (normv == 0 or normv != af.norm_val):
+                            continue
+
+                        files.append(np.load(os.path.join(speaker_dir, file)))
+                else:
+                    warnings.warn(f"file {file} is not of type .npy and has been ignored")
+                    continue
+            data.extend(files)
+            labels.extend([speaker] * len(files))
+
+        # Convert data and labels to numpy arrays
+        data = np.array(data)
+        labels = np.array(labels)
+
+        return data, labels
+    else:
+        for speaker in selected.keys():
+            files = []
+
+            speaker_dir: str = os.path.join(audio_data_dir, speaker)
+
+            for file in selected.get(speaker).Speaker_Files:
+
                 af = AudioFile.AudioFile(file, speaker)
 
-                if balanced == af.balanced and normalized == af.normalized and denoised == af.denoised and mfcc == af.mfcc and chroma == af.chroma and spec_contrast == af.speccontrast and tonnetz == af.tonnetz:
-                    if mfcc and n_mfcc != af.mfcc_val:
-                        continue
-                    if normalized and (normv == 0 or normv != af.norm_val):
-                        continue
+                if mfcc:
+                    af.mfcc = True
+                    af.mfcc_val = n_mfcc
 
-                    files.append(np.load(os.path.join(speaker_dir, file)))
-            else:
-                warnings.warn(f"file {file} is not of type .npy and has been ignored")
-                continue
-        data.extend(files)
-        labels.extend([speaker] * len(files))
+                af.chroma = chroma
+                af.speccontrast = spec_contrast
+                af.tonnetz = tonnetz
 
-    # Convert data and labels to numpy arrays
-    data = np.array(data)
-    labels = np.array(labels)
+                data_path = os.path.join(audio_data_dir, af.speaker_name, af.generate_filename())
 
-    return data, labels
+                if os.path.exists(data_path):
+                    af = AudioFile.AudioFile(file, speaker)
+
+                    if balanced == af.balanced and normalized == af.normalized and denoised == af.denoised and mfcc == af.mfcc and chroma == af.chroma and spec_contrast == af.speccontrast and tonnetz == af.tonnetz:
+                        if mfcc and n_mfcc != af.mfcc_val:
+                            continue
+                        if normalized and (normv == 0 or normv != af.norm_val):
+                            continue
+
+                        files.append(np.load(os.path.join(speaker_dir, file)))
+                else:
+                    m = f"Data file for {file} was not found and it has been skipped"
+                    warnings.warn(m)
+                    continue
+            data.extend(files)
+            labels.extend([speaker] * len(files))
+
+        # Convert data and labels to numpy arrays
+        data = np.array(data)
+        labels = np.array(labels)
+
+        return data, labels
+
 
 class RainbowColorGenerator:
     def __init__(self):
@@ -170,8 +217,7 @@ def extract_file_features_multi_threaded(file_path: str, data_dir: str, threads=
     af.speccontrast = extract_spec_contrast
     af.tonnetz = extract_tonnetz
 
-    data_path = os.path.join(data_dir, af.speaker_name, af.generate_filename())
-    print(data_path)
+    data_path = os.path.join(data_dir, af.generate_filename())
 
     if os.path.exists(data_path) and not overwrite:
         return
@@ -222,6 +268,7 @@ def extract_features_multi_threaded(
         extract_chroma: bool = False,
         extract_spec_contrast: bool = False,
         extract_tonnetz: bool = False,
+        selected: dict[str, TrainingData] = None
 ) -> None:
     if use_config:
         import configuration
@@ -237,39 +284,74 @@ def extract_features_multi_threaded(
         extract_tonnetz = config.getboolean("Features", "tonnetz")
 
     futures = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
-        for speaker in os.listdir(input_dir):
+    if not selected:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+            for speaker in os.listdir(input_dir):
 
-            if speaker == "unused":
-                continue
+                if speaker == "unused":
+                    continue
 
-            os.makedirs(os.path.join(data_dir, speaker), exist_ok=True)
+                os.makedirs(os.path.join(data_dir, speaker), exist_ok=True)
 
-            speaker_files = os.listdir(os.path.join(input_dir, speaker))
-            for file in speaker_files:
-                futures.append(
-                    executor.submit(
-                        extract_file_features_multi_threaded,
-                        os.path.join(input_dir, speaker, file),
-                        os.path.join(data_dir, speaker),
-                        threads,
-                        over_write,
-                        extract_mfcc,
-                        extract_chroma,
-                        extract_spec_contrast,
-                        extract_tonnetz,
-                        nmfcc,
+                speaker_files = os.listdir(os.path.join(input_dir, speaker))
+                for file in speaker_files:
+                    futures.append(
+                        executor.submit(
+                            extract_file_features_multi_threaded,
+                            os.path.join(input_dir, speaker, file),
+                            os.path.join(data_dir, speaker),
+                            threads,
+                            over_write,
+                            extract_mfcc,
+                            extract_chroma,
+                            extract_spec_contrast,
+                            extract_tonnetz,
+                            nmfcc,
+                        )
                     )
-                )
 
-        for future in tqdm.tqdm(
-                concurrent.futures.as_completed(futures),
-                total=len(futures),
-                desc=f"Extracting features",
-                dynamic_ncols=True,
-                colour="blue",
-        ):
-            try:
-                future.result()
-            except Exception as e:
-                print(e)
+            for future in tqdm.tqdm(
+                    concurrent.futures.as_completed(futures),
+                    total=len(futures),
+                    desc=f"Extracting features",
+                    dynamic_ncols=True,
+                    colour="blue",
+            ):
+                try:
+                    future.result()
+                except Exception as e:
+                    print(e)
+
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+            for speaker in selected.keys():
+
+                os.makedirs(os.path.join(data_dir, speaker), exist_ok=True)
+
+                for file in selected.get(speaker).Speaker_Files:
+                    futures.append(
+                        executor.submit(
+                            extract_file_features_multi_threaded,
+                            os.path.join(input_dir, speaker, file),
+                            os.path.join(data_dir, speaker),
+                            threads,
+                            over_write,
+                            extract_mfcc,
+                            extract_chroma,
+                            extract_spec_contrast,
+                            extract_tonnetz,
+                            nmfcc,
+                        )
+                    )
+
+            for future in tqdm.tqdm(
+                    concurrent.futures.as_completed(futures),
+                    total=len(futures),
+                    desc=f"Extracting features",
+                    dynamic_ncols=True,
+                    colour="#FF7F00",
+            ):
+                try:
+                    future.result()
+                except Exception as e:
+                    print(e)

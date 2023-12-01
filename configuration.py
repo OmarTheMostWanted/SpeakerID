@@ -75,7 +75,7 @@ def create_config() -> None:
     config.set("Settings", "Device", "cuda")  # string
     config.set("Settings", "Chunk Size", "100000")  # int
     config.set("Settings", "Overwrite Data", "no")  # bool
-    config.set("Settings", "audio seconds", "no")  # bool
+    config.set("Settings", "audio duration", '-1')  # bool
 
     config.add_section('Features')
     config.set('Features', 'MFCC', 'no')  # bool

@@ -53,15 +53,15 @@ def select_audio_files(speaker_dir: dict[str, float], target_duration: float) ->
     selected_duration = 0.0
     for audio_file, file_duration in sorted_map.items():
         if selected_duration + file_duration <= target_duration:
-            selected_files.append(audio_file)
+            selected_files.append(audio_file[:-4] + "_balanced.wav")
             selected_duration += file_duration
         else:
-            unused_files.append(audio_file)
+            unused_files.append(audio_file[:-4] + "_unused.wav")
     return selected_files, unused_files
 
 
 def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_dir: str = None,
-                               out_put_dir: str = None) -> [TrainingData]:
+                               out_put_dir: str = None, target_duration=-1) -> dict[str, TrainingData]:
     if out_put_dir is not None and not os.path.exists(out_put_dir):
         os.makedirs(out_put_dir)
 
@@ -77,6 +77,7 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_di
         else:
             input_dir = config["Paths"]["raw files"]
         out_put_dir = config["Paths"]["balanced files"]
+        target_duration = config.getfloat("Settings", "audio duration")
 
     elif input_dir is None or out_put_dir is None:
         raise Exception("Provide a directory or use config")
@@ -105,11 +106,18 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_di
                 print(f"Exception occurred during copying: {e}")
 
     speaker_with_min_duration = min(speakers, key=lambda speaker: speaker.Speaker_Total_Duration)
+    min_duration = speaker_with_min_duration.Speaker_Total_Duration
 
-    print(f"Target duration for each speaker: {round(speaker_with_min_duration.Speaker_Total_Duration, 2)} seconds.")
+    if target_duration != -1 and min_duration < target_duration:
+        warnings.warn("The target duration provided was bigger that the speaker with the largest audio duration, using the minimum duration instead")
+
+    if target_duration != -1 and min_duration > target_duration:
+        min_duration = target_duration
+
+    print(f"Target duration for each speaker: {round(min_duration, 2)} seconds.")
 
     def create_training_data(speaker_a: Speaker) -> TrainingData:
-        sf, unused = select_audio_files(speaker_a.Speaker_Audio_Files, speaker_with_min_duration.Speaker_Total_Duration)
+        sf, unused = select_audio_files(speaker_a.Speaker_Audio_Files, min_duration)
         return TrainingData(speaker_a.Speaker_Path, sf, unused)
 
     speaker_data: [TrainingData]
@@ -133,18 +141,17 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_di
 
             futures = []
             with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
-                speaker_data = list(executor.map(create_training_data, speakers))
                 for file in td.Speaker_Files:
-                    source: str = os.path.join(input_dir, td.Speaker_Name, file)
-                    dist: str = os.path.join(out_put_dir, td.Speaker_Name, file[:-4] + "_balanced.wav")
+                    source: str = os.path.join(input_dir, td.Speaker_Name, file[:-13]+".wav")
+                    dist: str = os.path.join(out_put_dir, td.Speaker_Name, file)
                     if not os.path.exists(dist):
                         futures.append(executor.submit(shutil.copy, source, dist))
 
                 os.makedirs(os.path.join(out_put_dir, "unused", td.Speaker_Name), exist_ok=True)
 
                 for file in td.Unused_Files:
-                    source = os.path.join(input_dir, td.Speaker_Name, file)
-                    dist = os.path.join(out_put_dir, "unused", td.Speaker_Name, file[:-4] + "_unused.wav")
+                    source = os.path.join(input_dir, td.Speaker_Name, file[:-11]+".wav")
+                    dist = os.path.join(out_put_dir, "unused", td.Speaker_Name, file)
                     if not os.path.exists(dist):
                         futures.append(executor.submit(shutil.copy, source, dist))
 
@@ -155,4 +162,4 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_di
                     except Exception as e:
                         print(f"Exception occurred during copying: {e}")
 
-    return speaker_data
+    return {td.Speaker_Name: td for td in speaker_data}

@@ -6,9 +6,10 @@ import numpy
 from pydub import AudioSegment
 from tqdm import tqdm
 
+from audio_balancer import TrainingData
+
 
 def normalize_file(input_path: str, out_put_dir: str = None, target_amplitude: float = 20):
-
     audio = AudioSegment.from_file(input_path)
 
     if os.path.exists(out_put_dir):
@@ -49,7 +50,7 @@ def calculate_average_amplitude(directory: str) -> float:
 
 def normalize_audio_files_multi_thread(threads: int = 4, use_conf: bool = True, input_dir: str = None,
                                        out_put_dir: str = None,
-                                       target_amplitude=20.0, use_average_amplitude: bool = False) -> float:
+                                       target_amplitude=20.0, use_average_amplitude: bool = False, selected: dict[str, TrainingData] = None) -> float:
     if use_conf:
         import configuration
         config = configuration.read_config()
@@ -102,22 +103,56 @@ def normalize_audio_files_multi_thread(threads: int = 4, use_conf: bool = True, 
 
     futures = []
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
-        for speaker_dir in os.listdir(input_dir):
-            for file in os.listdir(os.path.join(input_dir, speaker_dir)):
-                if file.endswith(".wav"):
-                    audio_path = os.path.join(input_dir, speaker_dir, file)
-                    normalized_path = os.path.join(out_put_dir, speaker_dir,
-                                                   file[:-4] + f"_normalized({round(target_amplitude, 2)}).wav")
-                    os.makedirs(os.path.dirname(normalized_path), exist_ok=True)
+    if not selected:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+            for speaker_dir in os.listdir(input_dir):
 
-                    futures.append(executor.submit(normalize_file, audio_path, normalized_path, target_amplitude))
+                if speaker_dir == "unused":
+                    continue
 
-        for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), dynamic_ncols=True,
-                           desc=f"Normalizing audio files to amplitude {round(target_amplitude, 1)} ", colour="CYAN"):
-            try:
-                future.result()
-            except Exception as e:
-                print(f"Exception occurred during normalizing: {e}")
+                for file in os.listdir(os.path.join(input_dir, speaker_dir)):
+                    if file.endswith(".wav"):
+                        audio_path = os.path.join(input_dir, speaker_dir, file)
+                        normalized_path = os.path.join(out_put_dir, speaker_dir,
+                                                       file[:-4] + f"_normalized({round(target_amplitude, 2)}).wav")
+                        os.makedirs(os.path.dirname(normalized_path), exist_ok=True)
 
-    return target_amplitude
+                        futures.append(executor.submit(normalize_file, audio_path, normalized_path, target_amplitude))
+
+            for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), dynamic_ncols=True,
+                               desc=f"Normalizing audio files to amplitude {round(target_amplitude, 1)} ", colour="CYAN"):
+                try:
+                    future.result()
+                except Exception as e:
+                    print(f"Exception occurred during normalizing: {e}")
+
+        return target_amplitude
+
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+            for speaker_name in selected.keys():
+
+                new_files = []
+
+                for file in selected.get(speaker_name).Speaker_Files:
+                    if file.endswith(".wav"):
+                        audio_path = os.path.join(input_dir, speaker_name, file)
+                        normalized_path = os.path.join(out_put_dir, speaker_name,
+                                                       file[:-4] + f"_normalized({round(target_amplitude, 2)}).wav")
+
+                        new_files.append(os.path.basename(normalized_path))
+
+                        os.makedirs(os.path.dirname(normalized_path), exist_ok=True)
+
+                        futures.append(executor.submit(normalize_file, audio_path, normalized_path, target_amplitude))
+
+                selected.get(speaker_name).Speaker_Files = new_files
+
+            for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), dynamic_ncols=True,
+                               desc=f"Normalizing audio files to amplitude {round(target_amplitude, 1)} ", colour="CYAN"):
+                try:
+                    future.result()
+                except Exception as e:
+                    print(f"Exception occurred during normalizing: {e}")
+
+        return target_amplitude
