@@ -20,7 +20,7 @@ def TrainSupportVectorClassification(data, labels):
 
     # Split the dataset into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(
-        data, labels, test_size=0.2, random_state=None
+        data, labels, test_size=0.2, random_state=1
     )
 
     # Define the model
@@ -90,7 +90,7 @@ def save_model(model, le, accuracy: float, normv: float, speakers: [str] = None,
     le_obj.tonnetz = tonnetz
     le_obj.speakers = speakers
 
-    os.makedirs(model_dir , exist_ok=True)
+    os.makedirs(model_dir, exist_ok=True)
 
     with open(os.path.join(model_dir, model_obj.generate_model_name()), "wb") as f:
         pickle.dump(model, f)
@@ -106,7 +106,6 @@ def load_model(accuracy: float, normv: float, speakers: [str] = None, use_config
                denoised: bool = False,
                mfcc: bool = False, chroma: bool = False, spec_contrast: bool = False,
                tonnetz: bool = False, n_mfcc: int = None, ):
-
     accuracy = np.round(accuracy, 2)
 
     if use_config:
@@ -161,10 +160,10 @@ def load_model(accuracy: float, normv: float, speakers: [str] = None, use_config
     return model, le
 
 
-def predict_speaker_with_probability(model, le, norv:float, threads=1):
+def predict_speaker_with_probability(model, le, norv: float, threads=1):
     print(
         "Note that, we will assume that your model was created using the settings present in the config.ini file, if the model was trained used differnt"
-        " settings expect bad accurate or a crash")
+        " settings expect bad accuracy or a crashes")
 
     import configuration
     config = configuration.read_config()
@@ -199,13 +198,28 @@ def predict_speaker_with_probability(model, le, norv:float, threads=1):
 
         audio, sample_rate = librosa.load(file_name_t)
 
-        features = afe.extract_spec_contrast_features(audio, sample_rate)
+        features = []
 
-        speaker_id = model.predict([features])
+        extract_mfcc = config.getboolean("Features", "mfcc")
+        nmfcc = config.getint("Settings", "N MFCC")
+        extract_chroma = config.getboolean("Features", "chroma")
+        extract_spec_contrast = config.getboolean("Features", "spec contrast")
+        extract_tonnetz = config.getboolean("Features", "tonnetz")
+
+        if extract_mfcc:
+            features.append(afe.extract_mfccs_features(audio, sample_rate, nmfcc))
+        if extract_chroma:
+            features.append(afe.extract_chroma_features(audio, sample_rate))
+        if extract_spec_contrast:
+            features.append(afe.extract_spec_contrast_features(audio, sample_rate))
+        if extract_tonnetz:
+            features.append(afe.extract_tonnetz_features(audio, sample_rate))
+
+        speaker_id = model.predict(np.concatenate(features))
         speaker_name = le.inverse_transform(speaker_id)
 
         # Get the probability of the prediction
-        probability = model.predict_proba([features])
+        probability = model.predict_proba(np.concatenate(features))
         max_prob_index = np.argmax(probability)
         max_prob = probability[0][max_prob_index]
 

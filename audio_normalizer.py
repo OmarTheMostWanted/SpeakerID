@@ -57,7 +57,9 @@ def normalize_audio_files_multi_thread(threads: int = 4, use_conf: bool = True, 
         if not config.getboolean("Settings", "Normalize"):
             print("Normalizing is disabled in the configuration file, so this step has been skipped")
             return 0
-        if config.getboolean("Settings", "balance"):
+        if config.getboolean("Settings", "Reduce Noise"):
+            input_dir = config["Paths"]["denoised files"]
+        elif config.getboolean("Settings", "balance"):
             input_dir = config["Paths"]["balanced files"]
         elif config.getboolean("Settings", "Convert to wav"):
             input_dir = config["Paths"]["wav files"]
