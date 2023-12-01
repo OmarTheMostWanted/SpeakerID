@@ -8,6 +8,57 @@ import concurrent.futures
 
 import AudioFile
 
+def load_features(normv: float, use_config: bool = True, audio_data_dir: str = None, balanced: bool = False, normalized: bool = False, denoised: bool = False,
+                  mfcc: bool = False, chroma: bool = False, spec_contrast: bool = False,
+                  tonnetz: bool = False, n_mfcc: int = None) -> ([np.ndarray], [str]):
+    data = []
+    labels = []
+
+    if use_config:
+        import configuration
+        config = configuration.read_config()
+
+        audio_data_dir = config["Paths"]["feature data"]
+        balanced = config.getboolean("Settings", "balance")
+        normalized = config.getboolean("Settings", "normalize")
+        denoised = config.getboolean("Settings", "reduce noise")
+        mfcc = config.getboolean("Features", "mfcc")
+        chroma = config.getboolean("Features", "chroma")
+        spec_contrast = config.getboolean("Features", "spec contrast")
+        tonnetz = config.getboolean("Features", "tonnetz")
+        n_mfcc = config.getint("Settings", "n mfcc")
+
+    # Iterate over all speakers (directories) in the root directory
+    for speaker in os.listdir(audio_data_dir):
+        files = []
+
+        if speaker == "unused":
+            continue
+
+        speaker_dir: str = os.path.join(audio_data_dir, speaker)
+
+        for file in os.listdir(os.path.join(audio_data_dir, speaker_dir)):
+            if file.endswith(".npy"):
+                af = AudioFile.AudioFile(file, speaker)
+
+                if balanced == af.balanced and normalized == af.normalized and denoised == af.denoised and mfcc == af.mfcc and chroma == af.chroma and spec_contrast == af.speccontrast and tonnetz == af.tonnetz:
+                    if mfcc and n_mfcc != af.mfcc_val:
+                        continue
+                    if normalized and (normv == 0 or normv != af.norm_val):
+                        continue
+
+                    files.append(np.load(os.path.join(speaker_dir, file)))
+            else:
+                warnings.warn(f"file {file} is not of type .npy and has been ignored")
+                continue
+        data.extend(files)
+        labels.extend([speaker] * len(files))
+
+    # Convert data and labels to numpy arrays
+    data = np.array(data)
+    labels = np.array(labels)
+
+    return data, labels
 
 class RainbowColorGenerator:
     def __init__(self):
@@ -119,7 +170,10 @@ def extract_file_features_multi_threaded(file_path: str, data_dir: str, threads=
     af.speccontrast = extract_spec_contrast
     af.tonnetz = extract_tonnetz
 
-    if os.path.exists(os.path.join(data_dir, af.speaker_name, af.generate_filename())) and not overwrite:
+    data_path = os.path.join(data_dir, af.speaker_name, af.generate_filename())
+    print(data_path)
+
+    if os.path.exists(data_path) and not overwrite:
         return
 
     else:
@@ -153,60 +207,8 @@ def extract_file_features_multi_threaded(file_path: str, data_dir: str, threads=
             feature_sets_results.append(future.result())
 
         features = np.concatenate(feature_sets_results)
-        np.save(os.path.join(data_dir, af.generate_filename()), features)
 
-
-def load_features(normv: float, use_config: bool = True, audio_data_dir: str = None, balanced: bool = False, normalized: bool = False, denoised: bool = False,
-                  mfcc: bool = False, chroma: bool = False, spec_contrast: bool = False,
-                  tonnetz: bool = False, n_mfcc: int = None) -> ([np.ndarray], [str]):
-    data = []
-    labels = []
-
-    if use_config:
-        import configuration
-        config = configuration.read_config()
-
-        audio_data_dir = config["Paths"]["feature data"]
-        balanced = config.getboolean("Settings", "balance")
-        normalized = config.getboolean("Settings", "normalize")
-        denoised = config.getboolean("Settings", "reduce noise")
-        mfcc = config.getboolean("Features", "mfcc")
-        chroma = config.getboolean("Features", "chroma")
-        spec_contrast = config.getboolean("Features", "spec contrast")
-        tonnetz = config.getboolean("Features", "tonnetz")
-        n_mfcc = config.getint("Settings", "n mfcc")
-
-    # Iterate over all speakers (directories) in the root directory
-    for speaker in os.listdir(audio_data_dir):
-        files = []
-
-        if speaker == "unused":
-            continue
-
-        speaker_dir: str = os.path.join(audio_data_dir, speaker)
-
-        for file in os.listdir(os.path.join(audio_data_dir, speaker_dir)):
-            if file.endswith(".npy"):
-                af = AudioFile.AudioFile(file, speaker)
-
-                if balanced == af.balanced and normalized == af.normalized and denoised == af.denoised and mfcc == af.mfcc and chroma == af.chroma and spec_contrast == af.speccontrast and tonnetz == af.tonnetz:
-                    if mfcc and n_mfcc != af.mfcc_val:
-                        continue
-                    if normalized and (normv == 0 or normv != af.norm_val):
-                        continue
-
-                    files.append(np.load(os.path.join(speaker_dir, file)))
-            else:
-                warnings.warn(f"file {file} is not of type .npy and has been ignored")
-                continue
-        data.extend(files)
-        labels.extend([speaker] * len(files))
-
-    # Convert data and labels to numpy arrays
-    data = np.array(data)
-    labels = np.array(labels)
-
-    return data, labels
+        np.save(data_path, features)
 
 
 def extract_features_multi_threaded(
