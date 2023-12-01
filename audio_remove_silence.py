@@ -4,6 +4,34 @@ import concurrent.futures
 from tqdm import tqdm
 import os
 
+# Import necessary libraries
+import numpy as np
+import soundfile as sf
+import librosa
+
+
+# Define the function to remove silence from an audio file
+def remove_silence_from_audio_librosa(file_path, output, sr=22050, frame_length=1024, hop_length=512, top_db=-50):
+    # Load the audio file using librosa's load function
+    # 'sr' is the target sampling rate (set to 22050 by default)
+    # 'y' is the audio time series and 'sr' is the sampling rate
+    y, sr = librosa.load(file_path, sr=sr)
+
+    # Trim the silence from the audio using librosa's trim function
+    # 'frame_length' is the length of the analysis window (set to 1024 by default)
+    # 'hop_length' is the number of samples between successive frames (set to 512 by default)
+    # 'top_db' is the threshold (in decibels) below which audio is considered silent (set to 20 by default)
+    # 'y_trim' is the trimmed audio signal and 'index' are the start and end indices of the non-silent intervals
+    y_trim, index = librosa.effects.trim(y, frame_length=frame_length, hop_length=hop_length, top_db=top_db)
+
+    # Write the trimmed audio signal back to a new file using soundfile's write function
+    # 'output.wav' is the name of the output file (replace with your desired output file path)
+    # 'y_trim' is the audio data and 'sr' is the sampling rate
+    sf.write(output, y_trim, sr)
+
+    # Return the trimmed audio signal and the sampling rate
+    return y_trim, sr
+
 
 def remove_silence_from_audio(file_path, output):
     # Load your audio file
@@ -63,7 +91,7 @@ def remove_silence_multi_thread(threads: int = 4, use_conf: bool = True, input_d
                     audio_path = os.path.join(input_dir, speaker_dir, file)
                     desilenced_path = os.path.join(out_put_dir, speaker_dir, file[:-4] + "_desilenced.wav")
 
-                    futures.append(executor.submit(remove_silence_from_audio, audio_path, desilenced_path))
+                    futures.append(executor.submit(remove_silence_from_audio_librosa, audio_path, desilenced_path))
 
         for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), dynamic_ncols=True,
                            desc="Removing silence", colour="#9400D3"):
