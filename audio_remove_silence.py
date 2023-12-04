@@ -90,7 +90,6 @@ def remove_silence_from_audio(file_path, output):
 def remove_silence_multi_thread(threads: int = 4, use_conf: bool = True, input_dir: str = None, out_put_dir: str = None, ):
     if out_put_dir is not None and not os.path.exists(out_put_dir):
         os.makedirs(out_put_dir)
-anr.reduce_noise_multi_thread(threads=6, selected=selected)
 
     if use_conf:
         import configuration
@@ -132,9 +131,6 @@ anr.reduce_noise_multi_thread(threads=6, selected=selected)
 
 if __name__ == "__main__":
     remove_silence("/home/tmw/Digivox/Test/00146514_000.wav", "/home/tmw/Digivox/Test/00146514_000_rs.wav")
-
-
-
 
 # Here are a couple of methods for automatically removing silent parts from audio recordings locally:
 #

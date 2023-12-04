@@ -239,6 +239,7 @@ def predict_speaker_with_probability(model, le, norv: float, threads=1):
 
 
 if __name__ == "__main__":
+
     import configuration
 
     config = configuration.read_config()
