@@ -70,7 +70,7 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_di
         config = configuration.read_config()
         if not config.getboolean("Settings", "Balance"):
             print("Balancing is disabled in the configuration file, so this step has been skipped")
-            return
+            return dict()
         if config.getboolean("Settings", "Remove Silence"):
             input_dir = config["Paths"]["remove silence files"]
         elif config.getboolean("Settings", "Reduce Noise"):

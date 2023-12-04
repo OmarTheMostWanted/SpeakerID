@@ -4,59 +4,39 @@ import concurrent.futures
 from tqdm import tqdm
 import os
 
-# Import necessary libraries
 import numpy as np
 import soundfile as sf
 import librosa
 
 
-def remove_silence(audio_file, threshold_percentile=20):
-    # Load the audio file
-    y, sr = librosa.load(audio_file)
+import numpy as np
 
-    # Calculate the threshold based on the specified percentile
-    threshold = np.percentile(np.abs(y), threshold_percentile)
-
-    # Remove silent segments
-    non_silent_intervals = librosa.detect_silence(y, threshold=threshold)
-    filtered_audio = []
-    for start, end in non_silent_intervals:
-        filtered_audio.append(y[start:end])
-
-    # Combine non-silent segments into a single audio signal
-    filtered_audio = np.concatenate(filtered_audio)
-
-    # Save the filtered audio
-    librosa.output.write_wav('filtered_audio.wav', filtered_audio, sr)
-
-
-# Define the function to remove silence from an audio file
 def remove_silence_from_audio_librosa(file_path, output, frame_length=1024, hop_length=512):
-    # Load the audio file using librosa's load function
-    # 'sr' is the target sampling rate (set to 22050 by default)
-    # 'y' is the audio time series and 'sr' is the sampling rate
-    y, sr = librosa.load(file_path)
+    # Load the audio file at its native sample rate
+    y, sr = librosa.load(file_path, sr=22850)
 
     # Estimate the decibel level of the background noise
-    # Here, we take the mean of the absolute amplitudes of the first 1000 samples
+    # Here, we take the mean of the absolute amplitudes of the first 2 seconds of the audio
     # You might want to adjust this depending on the characteristics of your audio files
-    noise_amp = np.mean(np.abs(y[:1000]))
+    noise_amp = np.mean(np.abs(y[:sr*2]))  # sr is the number of samples per second
     top_db = 20 * np.log10(noise_amp) + 2  # add 2 dB
 
-    # Trim the silence from the audio using librosa's trim function
-    # 'frame_length' is the length of the analysis window (set to 1024 by default)
-    # 'hop_length' is the number of samples between successive frames (set to 512 by default)
-    # 'top_db' is the threshold (in decibels) below which audio is considered silent (set to 20 by default)
-    # 'y_trim' is the trimmed audio signal and 'index' are the start and end indices of the non-silent intervals
+    top_db = -50
+
+    # Trim the silence from the audio
     y_trim, index = librosa.effects.trim(y, frame_length=frame_length, hop_length=hop_length, top_db=top_db)
 
-    # Write the trimmed audio signal back to a new file using soundfile's write function
-    # 'output.wav' is the name of the output file (replace with your desired output file path)
-    # 'y_trim' is the audio data and 'sr' is the sampling rate
+    # Check if the resulting audio is too short
+    if len(y_trim) < frame_length:
+        print(f"Warning: output audio is very short: {len(y_trim)}, The top_db threshold might be too high.")
+        return None, None
+
+    # Write the trimmed audio signal back to a new file
     sf.write(output, y_trim, sr)
 
     # Return the trimmed audio signal and the sampling rate
     return y_trim, sr
+
 
 
 def remove_silence_from_audio(file_path, output):
@@ -130,7 +110,8 @@ def remove_silence_multi_thread(threads: int = 4, use_conf: bool = True, input_d
 
 
 if __name__ == "__main__":
-    remove_silence("/home/tmw/Digivox/Test/00146514_000.wav", "/home/tmw/Digivox/Test/00146514_000_rs.wav")
+    remove_silence_from_audio_librosa("/home/tmw/Digivox/Test/00210632_000_denoised.wav", "/home/tmw/Digivox/Test/00210632_000_denoised_rs.wav")
+
 
 # Here are a couple of methods for automatically removing silent parts from audio recordings locally:
 #
@@ -163,3 +144,4 @@ if __name__ == "__main__":
 #
 # * The threshold value used to detect silence can be adjusted to remove shorter or longer silent parts.
 # * You can also use these methods to remove gaps between speech segments in a podcast or to trim the beginning and end of an audio recording.
+
