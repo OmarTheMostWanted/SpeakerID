@@ -169,7 +169,7 @@ def load_model(accuracy: float, normv: float, speakers: [str] = None, use_config
 
 def predict_speaker_with_probability(model, le, norv: float, threads=1):
     print(
-        "Note that, we will assume that your model was created using the settings present in the config.ini file, if the model was trained used differnt"
+        "Note that, we will assume that your model was created using the settings present in the config.ini file, if the model was trained using different"
         " settings expect bad accuracy or a crashes")
 
     import configuration
