@@ -53,7 +53,7 @@ def convert_to_wav_multi_thread(threads: int = 4, use_conf: bool = True, input_d
 
         # Add progress bar using tqdm
         for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), dynamic_ncols=True,
-                           desc="Converting files to wav"):
+                           desc="Converting files to wav" , colour="white"):
             try:
                 future.result()
             except Exception as e:

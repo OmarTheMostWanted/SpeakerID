@@ -9,7 +9,7 @@ from tqdm import tqdm
 from audio_balancer import TrainingData
 
 
-def normalize_file(input_path: str, out_put_dir: str = None, target_amplitude: float = 20):
+def normalize_file(input_path: str, out_put_dir: str = None, target_amplitude: float = -20):
     audio = AudioSegment.from_file(input_path)
 
     if os.path.exists(out_put_dir):
@@ -57,10 +57,13 @@ def normalize_audio_files_multi_thread(threads: int = 4, use_conf: bool = True, 
         if not config.getboolean("Settings", "Normalize"):
             print("Normalizing is disabled in the configuration file, so this step has been skipped")
             return 0
-        if config.getboolean("Settings", "Reduce Noise"):
-            input_dir = config["Paths"]["denoised files"]
-        elif config.getboolean("Settings", "balance"):
+
+        if config.getboolean("Settings", "balance"):
             input_dir = config["Paths"]["balanced files"]
+        elif config.getboolean("Settings", "remove silence"):
+            input_dir = config["Paths"]["remove silence files"]
+        elif config.getboolean("Settings", "Reduce Noise"):
+            input_dir = config["Paths"]["denoised files"]
         elif config.getboolean("Settings", "Convert to wav"):
             input_dir = config["Paths"]["wav files"]
         else:

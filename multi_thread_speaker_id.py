@@ -1,3 +1,4 @@
+import audio_remove_silence
 import model_manager
 import librosa.feature
 import numpy as np
@@ -11,6 +12,7 @@ import concurrent.futures
 import audio_feature_extraction as afe
 import audio_normalizer as an
 import audio_noise_reducer as anr
+import audio_remove_silence as asr
 
 
 def TrainSupportVectorClassification(data, labels):
@@ -180,26 +182,33 @@ def predict_speaker_with_probability(model, le, norv: float, threads=1):
             print("Closing the program.")
             break
 
-        if not audio_file_path.endswith(".wav"):
+        if not os.path.isfile(audio_file_path) and not audio_file_path[:-4].lower() == ".wav":
             print("only wav files are supported")
             continue
 
         file_name_t = audio_file_path
 
-        if config.getboolean("Settings", "normalize"):
-            print("normalizing file")
-            file_name_t = "temp_normalized.wav"
-            an.normalize_file(audio_file_path, "temp_normalized.wav", target_amplitude=norv)
+        if os.path.exists("temp_normalized.wav"):
+            os.remove("temp_normalized.wav")
+        if os.path.exists("temp_denoised.wav"):
+            os.remove("temp_denoised.wav")
+        if os.path.exists("temp_removed_silence.wav"):
+            os.remove("temp_removed_silence.wav")
 
         if config.getboolean("Settings", "reduce noise"):
             print("applying noise reduction")
+            anr.reduce_noise(file_name_t, output_path="temp_denoised.wav")
+            file_name_t = "temp_denoised.wav"
 
-            if config.getboolean("Settings", "normalize"):
-                file_name_t = "temp_normalized_denoised.wav"
-                anr.reduce_noise("temp_normalized.wav", output_path="temp_normalized_denoised.wav")
-            else:
-                file_name_t = "temp_denoised.wav"
-                anr.reduce_noise(audio_file_path, output_path="temp_denoised.wav")
+        if config.getboolean("Settings", "remove silence"):
+            print("Removing silence")
+            asr.remove_silence_from_audio_librosa(file_name_t, "temp_removed_silence.wav")
+            file_name_t = "temp_removed_silence.wav"
+
+        if config.getboolean("Settings", "normalize"):
+            print("normalizing file")
+            an.normalize_file(audio_file_path, "temp_normalized.wav", target_amplitude=norv)
+            file_name_t = "temp_normalized.wav"
 
         audio, sample_rate = librosa.load(file_name_t)
 
@@ -220,26 +229,27 @@ def predict_speaker_with_probability(model, le, norv: float, threads=1):
         if extract_tonnetz:
             features.append(afe.extract_tonnetz_features(audio, sample_rate))
 
-        speaker_id = model.predict(np.concatenate(features))
+        concatenated = [np.concatenate(features)]
+
+        speaker_id = model.predict(concatenated)
         speaker_name = le.inverse_transform(speaker_id)
 
         # Get the probability of the prediction
-        probability = model.predict_proba(np.concatenate(features))
+        probability = model.predict_proba(concatenated)
         max_prob_index = np.argmax(probability)
         max_prob = probability[0][max_prob_index]
 
         if os.path.exists("temp_normalized.wav"):
             os.remove("temp_normalized.wav")
-        if os.path.exists("temp_normalized_denoised.wav"):
-            os.remove("temp_normalized_denoised.wav")
         if os.path.exists("temp_denoised.wav"):
             os.remove("temp_denoised.wav")
+        if os.path.exists("temp_removed_silence.wav"):
+            os.remove("temp_removed_silence.wav")
 
         print(f"The speaker is: {speaker_name[0]} with a probability of {max_prob * 100:.2f}%")
 
 
 if __name__ == "__main__":
-
     import configuration
 
     config = configuration.read_config()

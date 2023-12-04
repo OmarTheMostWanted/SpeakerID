@@ -8,30 +8,34 @@ import numpy as np
 import soundfile as sf
 import librosa
 
-
 import numpy as np
 
+
 # Define the function to remove silence from an audio file
-def remove_silence_from_audio_librosa(file_path, output, sr=22050, frame_length=1024, hop_length=512, top_db=-50):
-    # Load the audio file using librosa's load function
+def remove_silence_from_audio_librosa(file_path, output, sr=22050, frame_length=1024, hop_length=512):
+    if os.path.exists(output):
+        return
+
+        # Load the audio file using librosa's load function
     # 'sr' is the target sampling rate (set to 22050 by default)
     # 'y' is the audio time series and 'sr' is the sampling rate
-    y, sr = librosa.load(file_path, sr=sr)
+    y, sr = librosa.load(file_path, sr=None)
 
     # Trim the silence from the audio using librosa's trim function
     # 'frame_length' is the length of the analysis window (set to 1024 by default)
     # 'hop_length' is the number of samples between successive frames (set to 512 by default)
     # 'top_db' is the threshold (in decibels) below which audio is considered silent (set to 20 by default)
     # 'y_trim' is the trimmed audio signal and 'index' are the start and end indices of the non-silent intervals
-    y_trim, index = librosa.effects.trim(y, frame_length=frame_length, hop_length=hop_length, top_db=top_db)
+    y_trim, index = librosa.effects.trim(y, frame_length=frame_length, hop_length=hop_length, top_db=80)
+
+    if len(y_trim) < frame_length:
+        print(f"Warning: output audio is very short. The top_db threshold might be too high.")
+        return
 
     # Write the trimmed audio signal back to a new file using soundfile's write function
     # 'output.wav' is the name of the output file (replace with your desired output file path)
     # 'y_trim' is the audio data and 'sr' is the sampling rate
     sf.write(output, y_trim, sr)
-
-    # Return the trimmed audio signal and the sampling rate
-    return y_trim, sr
 
 
 def remove_silence_from_audio(file_path, output):
@@ -107,7 +111,6 @@ def remove_silence_multi_thread(threads: int = 4, use_conf: bool = True, input_d
 if __name__ == "__main__":
     remove_silence_from_audio_librosa("/home/tmw/Digivox/Test/00210632_000_denoised.wav", "/home/tmw/Digivox/Test/00210632_000_denoised_rs.wav")
 
-
 # Here are a couple of methods for automatically removing silent parts from audio recordings locally:
 #
 # **Method 1: Using Audacity**
@@ -139,4 +142,3 @@ if __name__ == "__main__":
 #
 # * The threshold value used to detect silence can be adjusted to remove shorter or longer silent parts.
 # * You can also use these methods to remove gaps between speech segments in a podcast or to trim the beginning and end of an audio recording.
-
