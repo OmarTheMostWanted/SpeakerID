@@ -100,6 +100,9 @@ def save_model(model, le, accuracy: float, normv: float, speakers: [str] = None,
     with open(os.path.join(model_dir, le_obj.generate_le_name()), "wb") as f:
         pickle.dump(le, f)
 
+    print(f"Model saved as {os.path.join(model_dir, model_obj.generate_model_name())}")
+    print(f"Label Encoder saved as {os.path.join(model_dir, le_obj.generate_le_name())}")
+
 
 def load_model(accuracy: float, normv: float, speakers: [str] = None, use_config: bool = True, model_dir: str = None, balanced: bool = False,
                normalized: bool = False,

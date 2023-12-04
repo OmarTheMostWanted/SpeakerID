@@ -10,6 +10,26 @@ import soundfile as sf
 import librosa
 
 
+def remove_silence(audio_file, threshold_percentile=20):
+    # Load the audio file
+    y, sr = librosa.load(audio_file)
+
+    # Calculate the threshold based on the specified percentile
+    threshold = np.percentile(np.abs(y), threshold_percentile)
+
+    # Remove silent segments
+    non_silent_intervals = librosa.detect_silence(y, threshold=threshold)
+    filtered_audio = []
+    for start, end in non_silent_intervals:
+        filtered_audio.append(y[start:end])
+
+    # Combine non-silent segments into a single audio signal
+    filtered_audio = np.concatenate(filtered_audio)
+
+    # Save the filtered audio
+    librosa.output.write_wav('filtered_audio.wav', filtered_audio, sr)
+
+
 # Define the function to remove silence from an audio file
 def remove_silence_from_audio_librosa(file_path, output, sr=22050, frame_length=1024, hop_length=512, top_db=-50):
     # Load the audio file using librosa's load function
@@ -99,3 +119,42 @@ def remove_silence_multi_thread(threads: int = 4, use_conf: bool = True, input_d
                 future.result()
             except Exception as e:
                 print(f"Exception occurred during removing silence: {e}")
+
+
+if __name__ == "__main__":
+    remove_silence("/home/tmw/Digivox/Test/00146514_000.wav", "/home/tmw/Digivox/Test/00146514_000_rs.wav")
+
+
+
+
+# Here are a couple of methods for automatically removing silent parts from audio recordings locally:
+#
+# **Method 1: Using Audacity**
+#
+# Audacity is a free and open-source audio editing software that can be used to remove silent parts from audio recordings. Here's how to do it:
+#
+# 1. Import your audio recording into Audacity.
+# 2. Select the "Silence" tool from the toolbar.
+# 3. Click and drag the mouse over the silent parts of the recording to select them.
+# 4. Press the "Delete" key to remove the selected silent parts.
+# 5. Repeat steps 3 and 4 until all of the silent parts have been removed.
+# 6. Export the edited audio recording.
+#
+# **Method 2: Using ffmpeg**
+#
+# ffmpeg is a command-line tool that can be used to manipulate audio and video files. Here's how to remove silent parts from audio recordings using ffmpeg:
+#
+# 1. Open a terminal window.
+# 2. Navigate to the directory containing your audio recording.
+# 3. Use the following command to remove silent parts from the audio recording:
+#
+#
+# ffmpeg -i input.wav -af silenceremove=start_duration=-1:end_duration=-1:duration=1:detection_threshold=-35dB output.wav
+#
+#
+# This command will remove all silent parts from the audio recording that are longer than one second. The '-35dB' parameter specifies the minimum decibel level that must be exceeded for audio to be considered non-silent.
+#
+# **Additional Notes**
+#
+# * The threshold value used to detect silence can be adjusted to remove shorter or longer silent parts.
+# * You can also use these methods to remove gaps between speech segments in a podcast or to trim the beginning and end of an audio recording.
