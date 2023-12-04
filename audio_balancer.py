@@ -73,6 +73,8 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_di
             return
         if config.getboolean("Settings", "Remove Silence"):
             input_dir = config["Paths"]["remove silence files"]
+        elif config.getboolean("Settings", "Reduce Noise"):
+            input_dir = config["Paths"]["denoised files"]
         elif config.getboolean("Settings", "Convert to wav"):
             input_dir = config["Paths"]["wav files"]
         else:
@@ -143,7 +145,7 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_di
             futures = []
             with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
                 for file in td.Speaker_Files:
-                    source: str = os.path.join(input_dir, td.Speaker_Name, file[:-13]+".wav")
+                    source: str = os.path.join(input_dir, td.Speaker_Name, file[:-13] + ".wav")
                     dist: str = os.path.join(out_put_dir, td.Speaker_Name, file)
                     if not os.path.exists(dist):
                         futures.append(executor.submit(shutil.copy, source, dist))
@@ -151,7 +153,7 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_di
                 os.makedirs(os.path.join(out_put_dir, "unused", td.Speaker_Name), exist_ok=True)
 
                 for file in td.Unused_Files:
-                    source = os.path.join(input_dir, td.Speaker_Name, file[:-11]+".wav")
+                    source = os.path.join(input_dir, td.Speaker_Name, file[:-11] + ".wav")
                     dist = os.path.join(out_put_dir, "unused", td.Speaker_Name, file)
                     if not os.path.exists(dist):
                         futures.append(executor.submit(shutil.copy, source, dist))

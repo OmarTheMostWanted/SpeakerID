@@ -31,11 +31,17 @@ def remove_silence(audio_file, threshold_percentile=20):
 
 
 # Define the function to remove silence from an audio file
-def remove_silence_from_audio_librosa(file_path, output, sr=22050, frame_length=1024, hop_length=512, top_db=-50):
+def remove_silence_from_audio_librosa(file_path, output, frame_length=1024, hop_length=512):
     # Load the audio file using librosa's load function
     # 'sr' is the target sampling rate (set to 22050 by default)
     # 'y' is the audio time series and 'sr' is the sampling rate
-    y, sr = librosa.load(file_path, sr=sr)
+    y, sr = librosa.load(file_path)
+
+    # Estimate the decibel level of the background noise
+    # Here, we take the mean of the absolute amplitudes of the first 1000 samples
+    # You might want to adjust this depending on the characteristics of your audio files
+    noise_amp = np.mean(np.abs(y[:1000]))
+    top_db = 20 * np.log10(noise_amp) + 2  # add 2 dB
 
     # Trim the silence from the audio using librosa's trim function
     # 'frame_length' is the length of the analysis window (set to 1024 by default)
@@ -84,6 +90,7 @@ def remove_silence_from_audio(file_path, output):
 def remove_silence_multi_thread(threads: int = 4, use_conf: bool = True, input_dir: str = None, out_put_dir: str = None, ):
     if out_put_dir is not None and not os.path.exists(out_put_dir):
         os.makedirs(out_put_dir)
+anr.reduce_noise_multi_thread(threads=6, selected=selected)
 
     if use_conf:
         import configuration
@@ -91,7 +98,9 @@ def remove_silence_multi_thread(threads: int = 4, use_conf: bool = True, input_d
         if not config.getboolean("Settings", "Remove Silence"):
             print("Silence removal is disabled in the configuration file, so this step has been skipped")
             return
-        if config.getboolean("Settings", "Convert to wav"):
+        if config.getboolean("Settings", "Reduce Noise"):
+            input_dir = config["Paths"]["denoised files"]
+        elif config.getboolean("Settings", "Convert to wav"):
             input_dir = config["Paths"]["wav files"]
         else:
             input_dir = config["Paths"]["raw files"]

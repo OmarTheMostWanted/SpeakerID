@@ -40,11 +40,9 @@ def TrainSupportVectorClassification(data, labels):
     return (model, le, accuracy)
 
 
-def save_model(model, le, accuracy: float, normv: float, speakers: [str] = None, model_dir: str = None, use_config: bool = True, balanced: bool = False,
-               normalized: bool = False,
-               denoised: bool = False,
-               mfcc: bool = False, chroma: bool = False, spec_contrast: bool = False,
-               tonnetz: bool = False, n_mfcc: int = None, ):
+def save_model(model, le, accuracy: float, normv: float, speakers: [str] = None, model_dir: str = None, use_config: bool = True, denoised: bool = False,
+               desilence: bool = False, balanced: bool = False, normalized: bool = False, mfcc: bool = False, chroma: bool = False, spec_contrast: bool = False,
+               tonnetz: bool = False, n_mfcc: int = None):
     # Save the trained model and add a progress message
     print("Saving model...")
 
@@ -58,6 +56,7 @@ def save_model(model, le, accuracy: float, normv: float, speakers: [str] = None,
         balanced = config.getboolean("Settings", "balance")
         normalized = config.getboolean("Settings", "normalize")
         denoised = config.getboolean("Settings", "reduce noise")
+        desilence = config.getboolean("Settings", "remove silence")
         mfcc = config.getboolean("Features", "mfcc")
         chroma = config.getboolean("Features", "chroma")
         spec_contrast = config.getboolean("Features", "spec contrast")
@@ -67,6 +66,7 @@ def save_model(model, le, accuracy: float, normv: float, speakers: [str] = None,
     model_obj = model_manager.ModelFile()
     model_obj.accuracy = accuracy
     model_obj.norm_val = normv
+    model_obj.desilenced = desilence
     model_obj.balanced = balanced
     model_obj.normalized = normalized
     model_obj.denoised = denoised
@@ -80,6 +80,7 @@ def save_model(model, le, accuracy: float, normv: float, speakers: [str] = None,
     le_obj = model_manager.LabelEncoderFile()
     le_obj.accuracy = accuracy
     le_obj.norm_val = normv
+    le_obj.desilenced = desilence
     le_obj.balanced = balanced
     le_obj.normalized = normalized
     le_obj.denoised = denoised
@@ -104,10 +105,8 @@ def save_model(model, le, accuracy: float, normv: float, speakers: [str] = None,
     print(f"Label Encoder saved as {os.path.join(model_dir, le_obj.generate_le_name())}")
 
 
-def load_model(accuracy: float, normv: float, speakers: [str] = None, use_config: bool = True, model_dir: str = None, balanced: bool = False,
-               normalized: bool = False,
-               denoised: bool = False,
-               mfcc: bool = False, chroma: bool = False, spec_contrast: bool = False,
+def load_model(accuracy: float, normv: float, speakers: [str] = None, use_config: bool = True, model_dir: str = None, denoised: bool = False,
+               desilence: bool = False, balanced: bool = False, normalized: bool = False, mfcc: bool = False, chroma: bool = False, spec_contrast: bool = False,
                tonnetz: bool = False, n_mfcc: int = None, ):
     accuracy = np.round(accuracy, 2)
 
@@ -124,10 +123,12 @@ def load_model(accuracy: float, normv: float, speakers: [str] = None, use_config
         spec_contrast = config.getboolean("Features", "spec contrast")
         tonnetz = config.getboolean("Features", "tonnetz")
         n_mfcc = config.getint("Settings", "n mfcc")
+        desilence = config.getboolean("Settings", "remove silence")
 
     model_obj = model_manager.ModelFile()
     model_obj.accuracy = accuracy
     model_obj.norm_val = normv
+    model_obj.desilenced = desilence
     model_obj.balanced = balanced
     model_obj.normalized = normalized
     model_obj.denoised = denoised
@@ -141,6 +142,7 @@ def load_model(accuracy: float, normv: float, speakers: [str] = None, use_config
     le_obj = model_manager.LabelEncoderFile()
     le_obj.accuracy = accuracy
     le_obj.norm_val = normv
+    le_obj.desilenced = desilence
     le_obj.balanced = balanced
     le_obj.normalized = normalized
     le_obj.denoised = denoised
@@ -237,30 +239,57 @@ def predict_speaker_with_probability(model, le, norv: float, threads=1):
 
 
 if __name__ == "__main__":
-    # Example usage:
-    # Creating an instance of AudioFeatureFile
-    # audio_file_instance = AudioFeatureFile("John", "song", ["mfcc", "chroma"])
-    #
-    # # Generating a file name
-    # file_name = audio_file_instance.get_file_name()
-    # print(f"Generated file name: {file_name}")
-    #
-    # # Parsing a file name
-    # parsed_audio_file = AudioFeatureFile("", "", [])
-    # parsed_audio_file.parse_file_name(file_name)
-    # print(f"Parsed speaker name: {parsed_audio_file.speaker_name}")
-    # print(f"Parsed file name: {parsed_audio_file.file_name}")
-    # print(f"Parsed features: {parsed_audio_file.features}")
+    import configuration
 
-    # Reading files for a given set of features and mfcc number
-    speaker_directory = "/home/tmw/Digivox/data_cache/20319"
-    features_to_find = ["speccontrast"]
+    config = configuration.read_config()
+    speakers = os.listdir(config["Paths"]["training data"])
+    model_dir = config["Paths"]["models"]
+    balanced = config.getboolean("Settings", "balance")
+    normalized = config.getboolean("Settings", "normalize")
+    denoised = config.getboolean("Settings", "reduce noise")
+    mfcc = config.getboolean("Features", "mfcc")
+    chroma = config.getboolean("Features", "chroma")
+    spec_contrast = config.getboolean("Features", "spec contrast")
+    tonnetz = config.getboolean("Features", "tonnetz")
+    n_mfcc = config.getint("Settings", "n mfcc")
+    desilence = config.getboolean("Settings", "remove silence")
 
-    matching_files = AudioFeatureFile.read_files_for_features(speaker_directory, features_to_find, None)
-    print(f"Matching files: {matching_files}")
+    model_obj = model_manager.ModelFile()
+    model_obj.accuracy = 69.0
+    model_obj.norm_val = 20.2
+    model_obj.desilenced = desilence
+    model_obj.balanced = balanced
+    model_obj.normalized = normalized
+    model_obj.denoised = denoised
+    model_obj.mfcc = mfcc
+    model_obj.mfcc_val = n_mfcc
+    model_obj.chroma = chroma
+    model_obj.speccontrast = spec_contrast
+    model_obj.tonnetz = tonnetz
+    model_obj.speakers = speakers
 
-    model, le = load_model(
-        "/home/tmw/Code/SpeakerID", "model_100.0_.pkl", "label_encoder_100.0_.pkl"
-    )
+    le_obj = model_manager.LabelEncoderFile()
+    le_obj.accuracy = 69.0
+    le_obj.norm_val = 20.2
+    le_obj.desilenced = desilence
+    le_obj.balanced = balanced
+    le_obj.normalized = normalized
+    le_obj.denoised = denoised
+    le_obj.mfcc = mfcc
+    le_obj.mfcc_val = n_mfcc
+    le_obj.chroma = chroma
+    le_obj.speccontrast = spec_contrast
+    le_obj.tonnetz = tonnetz
+    le_obj.speakers = speakers
 
-    predict_speaker_with_probability(model, le)
+    model = model_obj.generate_model_name()
+    le = le_obj.generate_le_name()
+
+    print(model)
+    print(le)
+
+    model2 = model_manager.ModelFile.from_name(model)
+    le2 = model_manager.LabelEncoderFile.from_name(le)
+
+    print(model2.generate_model_name())
+    print(le2.generate_le_name())

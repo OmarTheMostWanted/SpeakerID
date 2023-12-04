@@ -62,9 +62,8 @@ def reduce_noise_multi_thread(threads: int = 4, use_conf: bool = True, input_dir
         if not config.getboolean("Settings", "Reduce Noise"):
             print("Noise reduction is disabled in the configuration file, so this step has been skipped")
             return
-        if config.getboolean("Settings", "balance"):
-            input_dir = config["Paths"]["balanced files"]
-        elif config.getboolean("Settings", "Convert to wav"):
+
+        if config.getboolean("Settings", "Convert to wav"):
             input_dir = config["Paths"]["wav files"]
         else:
             input_dir = config["Paths"]["raw files"]
