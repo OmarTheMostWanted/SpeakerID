@@ -1,6 +1,3 @@
-import os
-
-import AudioFile
 import audio_wav_converter as aw
 import audio_balancer as ab
 import audio_normalizer as an
@@ -34,7 +31,6 @@ import librosa
 # lime and sub: lime: take a data point, change it slightly, and see how it effects the model
 
 # CNNs as a next step.
-
 
 
 import librosa
@@ -74,9 +70,8 @@ extract_chroma = config.getboolean("Features", "chroma")
 extract_spec_contrast = config.getboolean("Features", "spec contrast")
 extract_tonnetz = config.getboolean("Features", "tonnetz")
 
+
 # mfcc, chroma, spec_constrast, tonnetz
-
-
 
 
 def extract_features(file_name, label):
@@ -109,8 +104,8 @@ from sklearn import svm
 from sklearn.model_selection import train_test_split
 
 # Assuming 'data' is a DataFrame containing your extracted features and labels
-X = data.drop('label', axis=1)  # Features
-y = data['label']  # Labels
+X = features.drop('label', axis=1)  # Features
+y = features['label']  # Labels
 
 # Split the data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -123,8 +118,6 @@ clf.fit(X_train, y_train)
 
 # Use the trained model to make predictions on the test set
 y_pred = clf.predict(X_test)
-
-
 
 print("end")
 
