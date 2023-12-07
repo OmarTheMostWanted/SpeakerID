@@ -24,6 +24,7 @@ def convert_to_wav_multi_thread(threads: int = 4, use_conf: bool = True, input_d
     if use_conf:
         import configuration
         config = configuration.read_config()
+
         if not config.getboolean("Settings", "Convert to wav"):
             print("Converting to wav is disabled in the configuration file, so this step has been skipped")
             return

@@ -1,3 +1,5 @@
+import warnings
+
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
 import concurrent.futures
@@ -11,9 +13,17 @@ import librosa
 import numpy as np
 
 
+def is_silent(audio_file, threshold=80):
+    audio_data, _ = librosa.load(audio_file)
+    return audio_data.max() < threshold
+
+
 # Define the function to remove silence from an audio file
 def remove_silence_from_audio_librosa(file_path, output, sr=22050, frame_length=1024, hop_length=512):
     if os.path.exists(output):
+        return
+
+    if is_silent(file_path):
         return
 
         # Load the audio file using librosa's load function
@@ -29,7 +39,7 @@ def remove_silence_from_audio_librosa(file_path, output, sr=22050, frame_length=
     y_trim, index = librosa.effects.trim(y, frame_length=frame_length, hop_length=hop_length, top_db=80)
 
     if len(y_trim) < frame_length:
-        print(f"Warning: output audio is very short. The top_db threshold might be too high.")
+        warnings.warn(f"Warning: output audio is very short. The top_db threshold might be too high.")
         return
 
     # Write the trimmed audio signal back to a new file using soundfile's write function
@@ -109,8 +119,8 @@ def remove_silence_multi_thread(threads: int = 4, use_conf: bool = True, input_d
 
 
 if __name__ == "__main__":
-    remove_silence_from_audio_librosa("/home/tmw/Digivox/Test/00210632_000_denoised.wav", "/home/tmw/Digivox/Test/00210632_000_denoised_rs.wav")
-
+    remove_silence_from_audio_librosa("/home/tmw/Digivox/audio_data/Test/00242111_000.WAV", "/home/tmw/Digivox/audio_data/Test/00242111_000_rs.WAV")
+    os.remove("/home/tmw/Digivox/audio_data/Test/00242111_000_rs.WAV")
 # Here are a couple of methods for automatically removing silent parts from audio recordings locally:
 #
 # **Method 1: Using Audacity**

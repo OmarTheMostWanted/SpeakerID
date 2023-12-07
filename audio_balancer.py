@@ -148,7 +148,7 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_di
                     source: str = os.path.join(input_dir, td.Speaker_Name, file[:-13] + ".wav")
                     dist: str = os.path.join(out_put_dir, td.Speaker_Name, file)
                     if not os.path.exists(dist):
-                        futures.append(executor.submit(shutil.copy, source, dist))
+                        futures.append(executor.submit(shutil.copy2, source, dist))
 
                 os.makedirs(os.path.join(out_put_dir, "unused", td.Speaker_Name), exist_ok=True)
 
@@ -156,7 +156,7 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_di
                     source = os.path.join(input_dir, td.Speaker_Name, file[:-11] + ".wav")
                     dist = os.path.join(out_put_dir, "unused", td.Speaker_Name, file)
                     if not os.path.exists(dist):
-                        futures.append(executor.submit(shutil.copy, source, dist))
+                        futures.append(executor.submit(shutil.copy2, source, dist))
 
                 for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), colour="#32cd32",
                                    dynamic_ncols=True, desc=f"Copying balanced audio files of {td.Speaker_Name}"):
