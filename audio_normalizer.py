@@ -143,6 +143,8 @@ def normalize_audio_files_multi_thread(threads: int = 4, use_conf: bool = True, 
 
         if config.getboolean("Settings", "balance"):
             input_dir = config["Paths"]["balanced files"]
+        elif config.getboolean("Settings", "Split files"):
+            input_dir = config["Paths"]["Split Files"]
         elif config.getboolean("Settings", "remove silence"):
             input_dir = config["Paths"]["remove silence files"]
         elif config.getboolean("Settings", "Reduce Noise"):

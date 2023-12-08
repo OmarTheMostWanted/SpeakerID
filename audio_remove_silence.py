@@ -12,9 +12,28 @@ import librosa
 
 import numpy as np
 
+import numpy as np
+import librosa
 
-def is_silent(audio_file, threshold=80):
+
+def is_silent(audio_file, percentile=95):
+    """
+    Function to determine if an audio file is silent based on a dynamically calculated threshold.
+
+    Parameters:
+    audio_file (str): Path to the audio file.
+    percentile (int): Percentile value used to calculate the threshold. Default is 95.
+
+    Returns:
+    bool: True if the audio file is silent, False otherwise.
+    """
+    # Load the audio file
     audio_data, _ = librosa.load(audio_file)
+
+    # Calculate the threshold based on the given percentile
+    threshold = np.percentile(audio_data, percentile)
+
+    # Return True if the maximum value in the audio data is less than the threshold
     return audio_data.max() < threshold
 
 

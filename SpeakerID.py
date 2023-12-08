@@ -5,134 +5,77 @@ import audio_noise_reducer as anr
 import audio_feature_extraction as afe
 import multi_thread_speaker_id as sid
 import audio_remove_silence as ars
+import audio_split
 import configuration
-
-import pandas as pd
-import numpy as np
-import librosa
-
-# config = configuration.read_config()
-# input_dir = config["Paths"]["training data"]
-# data_dir = config["Paths"]["feature data"]
-# over_write = config.getboolean("Settings", "overwrite data")
-#
-# extract_mfcc = config.getboolean("Features", "mfcc")
-# nmfcc = config.getint("Settings", "N MFCC")
-# extract_chroma = config.getboolean("Features", "chroma")
-# extract_spec_contrast = config.getboolean("Features", "spec contrast")
-# extract_tonnetz = config.getboolean("Features", "tonnetz")
-
-
-#  ues pandas, for plotting and visualizing
-# get more data
-# seperate the features
-# look at the phonexia documentation
-
-# lime and sub: lime: take a data point, change it slightly, and see how it effects the model
-
-# CNNs as a next step.
-
-
-import librosa
-
-import configuration
+import os
 
 config = configuration.read_config()
-
-audio_file_path = "/home/tmw/Digivox/audio_data/data/20319/00210632_000.WAV"
-file_name_t = audio_file_path
-
-if os.path.exists("temp_normalized.wav"):
-    os.remove("temp_normalized.wav")
-if os.path.exists("temp_denoised.wav"):
-    os.remove("temp_denoised.wav")
-if os.path.exists("temp_removed_silence.wav"):
-    os.remove("temp_removed_silence.wav")
-
-anr.reduce_noise(file_name_t, output_path="temp_denoised.wav")
-file_name_t = "temp_denoised.wav"
-
-print("Removing silence")
-ars.remove_silence_from_audio_librosa(file_name_t, "temp_removed_silence.wav")
-file_name_t = "temp_removed_silence.wav"
-
-print("normalizing file")
-an.normalize_file(audio_file_path, "temp_normalized.wav", target_amplitude=-20)
-file_name_t = "temp_normalized.wav"
-
-audio, sample_rate = librosa.load(file_name_t)
-
-features = []
-
-extract_mfcc = config.getboolean("Features", "mfcc")
-nmfcc = config.getint("Settings", "N MFCC")
-extract_chroma = config.getboolean("Features", "chroma")
-extract_spec_contrast = config.getboolean("Features", "spec contrast")
-extract_tonnetz = config.getboolean("Features", "tonnetz")
-
-
-# mfcc, chroma, spec_constrast, tonnetz
-
-
-def extract_features(file_name, label):
-    try:
-        audio, sample_rate = librosa.load(file_name, res_type='kaiser_fast')
-        mfccs = afe.extract_mfccs_features(audio, sample_rate, nmfcc)
-        chroma = afe.extract_chroma_features(audio, sample_rate)
-        spec_contrast = afe.extract_spec_contrast_features(audio, sample_rate)
-        tonnetz = afe.extract_tonnetz_features(audio, sample_rate)
-
-        # Create a pandas Series for this file
-        features = pd.DataFrame({
-            'mfccs': mfccs,
-            'chroma': chroma,
-            'spec_contrast': spec_contrast,
-            'tonnetz': tonnetz,
-            'label': label
-        })
-
-        return features
-
-    except Exception as e:
-        print("Error encountered while parsing file: ", file_name)
-        return None
-
-
-features = extract_features('audio.wav', 'label')
-
-from sklearn import svm
-from sklearn.model_selection import train_test_split
-
-# Assuming 'data' is a DataFrame containing your extracted features and labels
-X = features.drop('label', axis=1)  # Features
-y = features['label']  # Labels
-
-# Split the data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# Create a SVC classifier
-clf = svm.SVC()
-
-# Train the model
-clf.fit(X_train, y_train)
-
-# Use the trained model to make predictions on the test set
-y_pred = clf.predict(X_test)
-
-print("end")
-
+#
 # aw.convert_to_wav_multi_thread(threads=8)
 # anr.reduce_noise_multi_thread(threads=6)
 # ars.remove_silence_multi_thread(threads=8)
+# audio_split.split_audio_multi_thread(threads=8)
 # selected = ab.balance_audio_multi_thread(threads=8)
 # amplitude = an.normalize_audio_files_multi_thread(threads=8, selected=selected)
-# afe.extract_features_multi_threaded(threads=2, selected=selected)
-# data, labels = afe.load_features(-26, selected=selected)
 #
-# model, le, accuracy = sid.TrainSupportVectorClassification(data, labels)
+# afe.extract_all_features_multi_threaded(use_config=True, threads=6, over_write=False, selected=selected)
 #
-# sid.save_model(model, le, accuracy, amplitude)
+# data_mfcc, labels_mfcc = afe.load_features(normv=amplitude, use_config=False, audio_data_dir=config["Paths"]["feature data"], balanced=True, denoised=True,
+#                                            n_mfcc=config.getint("Settings", "n mfcc"),
+#                                            normalized=True, split=True, mfcc=True)
+# data_chroma, labels_chroma = afe.load_features(normv=amplitude, use_config=False, audio_data_dir=config["Paths"]["feature data"], balanced=True, denoised=True,
+#                                                n_mfcc=config.getint("Settings", "n mfcc"),
+#                                                normalized=True, split=True, chroma=True)
+# data_spec_contrast, labels_spec_contrast = afe.load_features(normv=amplitude, use_config=False, audio_data_dir=config["Paths"]["feature data"], balanced=True,
+#                                                              denoised=True, n_mfcc=config.getint("Settings", "n mfcc"),
+#                                                              normalized=True, split=True, spec_contrast=True)
+# data_tonnetz, labels_tonnetz = afe.load_features(normv=amplitude, use_config=False, audio_data_dir=config["Paths"]["feature data"], balanced=True,
+#                                                  denoised=True, n_mfcc=config.getint("Settings", "n mfcc"),
+#                                                  normalized=True, split=True, tonnetz=True)
 #
-# model, le = sid.load_model(accuracy, amplitude)
+# model_mfcc, le_mfcc, accuracy_mfcc = sid.TrainSupportVectorClassification(data_mfcc, labels_mfcc)
+# model_chroma, le_chroma, accuracy_chroma = sid.TrainSupportVectorClassification(data_chroma, labels_chroma)
+# model_spec_contrast, le_spec_contrast, accuracy_spec_contrast = sid.TrainSupportVectorClassification(data_spec_contrast, labels_spec_contrast)
+# model_tonnetz, le_tonnetz, accuracy_tonnetz = sid.TrainSupportVectorClassification(data_tonnetz, labels_tonnetz)
 #
-# sid.predict_speaker_with_probability(model, le, amplitude, 4)
+# sid.save_model(model_mfcc, le_mfcc, accuracy_mfcc, amplitude, use_config=False, mfcc=True, speakers=os.listdir(config["Paths"]["training data"]), denoised=True,
+#                normalized=True, balanced=True, model_dir=config["Paths"]["models"], n_mfcc=config.getint("Settings", "n mfcc"))
+# sid.save_model(model_chroma, le_chroma, accuracy_chroma, amplitude, use_config=False, chroma=True, speakers=os.listdir(config["Paths"]["training data"]),
+#                denoised=True, normalized=True, balanced=True, model_dir=config["Paths"]["models"])
+# sid.save_model(model_spec_contrast, le_spec_contrast, accuracy_spec_contrast, amplitude, use_config=False, spec_contrast=True,
+#                speakers=os.listdir(config["Paths"]["training data"]), denoised=True, normalized=True, balanced=True, model_dir=config["Paths"]["models"])
+# sid.save_model(model_tonnetz, le_tonnetz, accuracy_tonnetz, amplitude, use_config=False, tonnetz=True, speakers=os.listdir(config["Paths"]["training data"]),
+#                denoised=True, normalized=True, balanced=True, model_dir=config["Paths"]["models"])
+#
+# model_mfcc_l, le_mfcc_l = sid.load_model(accuracy=accuracy_mfcc, normv=amplitude, use_config=False, mfcc=True,
+#                                          speakers=os.listdir(config["Paths"]["training data"]), denoised=True, normalized=True, balanced=True,
+#                                          model_dir=config["Paths"]["models"], n_mfcc=config.getint("Settings", "n mfcc"))
+# model_chroma_l, le_chroma_l = sid.load_model(accuracy=accuracy_chroma, normv=amplitude, use_config=False, chroma=True,
+#                                              speakers=os.listdir(config["Paths"]["training data"]),
+#                                              denoised=True, normalized=True, balanced=True, model_dir=config["Paths"]["models"], )
+# model_spec_contrast_l, le_spec_contrast_l = sid.load_model(accuracy=accuracy_spec_contrast, normv=amplitude, use_config=False, spec_contrast=True,
+#                                                            speakers=os.listdir(config["Paths"]["training data"]), denoised=True,
+#                                                            normalized=True, balanced=True, model_dir=config["Paths"]["models"])
+# model_tonnetz_l, le_tonnetz_l = sid.load_model(accuracy=accuracy_tonnetz, normv=amplitude, use_config=False, tonnetz=True,
+#                                                speakers=os.listdir(config["Paths"]["training data"]), denoised=True, normalized=True,
+#                                                balanced=True, model_dir=config["Paths"]["models"])
+#
+# sid.predict_speaker_with_combined_split_probability(model_mfcc_l, model_chroma_l, model_spec_contrast_l, model_tonnetz_l, le_mfcc_l, amplitude)
+
+amplitude = -30.0
+
+
+model_mfcc_l, le_mfcc_l = sid.load_model(accuracy=0.21, normv=amplitude, use_config=False, mfcc=True,
+                                         speakers=os.listdir(config["Paths"]["training data"]), denoised=True, normalized=True, balanced=True,
+                                         model_dir=config["Paths"]["models"], n_mfcc=config.getint("Settings", "n mfcc"))
+model_chroma_l, le_chroma_l = sid.load_model(accuracy=1.0, normv=amplitude, use_config=False, chroma=True,
+                                             speakers=os.listdir(config["Paths"]["training data"]),
+                                             denoised=True, normalized=True, balanced=True, model_dir=config["Paths"]["models"], )
+model_spec_contrast_l, le_spec_contrast_l = sid.load_model(accuracy=1.0, normv=amplitude, use_config=False, spec_contrast=True,
+                                                           speakers=os.listdir(config["Paths"]["training data"]), denoised=True,
+                                                           normalized=True, balanced=True, model_dir=config["Paths"]["models"])
+model_tonnetz_l, le_tonnetz_l = sid.load_model(accuracy=0.97, normv=amplitude, use_config=False, tonnetz=True,
+                                               speakers=os.listdir(config["Paths"]["training data"]), denoised=True, normalized=True,
+                                               balanced=True, model_dir=config["Paths"]["models"])
+
+sid.predict_speaker_with_combined_probability(model_mfcc_l, model_chroma_l, model_spec_contrast_l, model_tonnetz_l, le_mfcc_l, amplitude)

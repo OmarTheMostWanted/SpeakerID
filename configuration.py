@@ -58,6 +58,7 @@ def create_config() -> None:
     config.set('Paths', 'Raw Files', '')  # string
     config.set('Paths', 'Wav Files', '')  # string
     config.set('Paths', 'Remove Silence Files', '')  # string
+    config.set('Paths', 'Split Files', '')  # string
     config.set('Paths', 'Balanced Files', '')  # string
     config.set('Paths', 'Normalized Files', '')  # string
     config.set('Paths', 'Denoised Files', '')  # string
@@ -68,10 +69,13 @@ def create_config() -> None:
     config.add_section('Settings')
     config.set('Settings', 'Convert To wav', 'yes')  # bool
     config.set("Settings", "Remove Silence", 'yes')  # bool
+    config.set("Settings", "Split Files", 'yes')  # bool
     config.set('Settings', 'Balance', 'yes')  # bool
     config.set('Settings', 'Normalize', 'yes')  # bool
     config.set('Settings', 'Reduce Noise', 'yes')  # bool
     config.set('Settings', 'N MFCC', '40')  # float
+    config.set("Settings", "split minutes", '5')
+
     config.set('Settings', 'Target Amplitude', '0.0')  # float
     config.set('Settings', 'Average Amplitude', 'yes')  # bool
     config.set("Settings", "Device", "cuda")  # string

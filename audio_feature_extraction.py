@@ -12,8 +12,8 @@ from audio_balancer import TrainingData
 
 
 def load_features(normv: float, use_config: bool = True, audio_data_dir: str = None, balanced: bool = False, normalized: bool = False, denoised: bool = False,
-                  mfcc: bool = False, chroma: bool = False, spec_contrast: bool = False,
-                  tonnetz: bool = False, n_mfcc: int = None, selected: dict[str, TrainingData] = None) -> ([np.ndarray], [str]):
+                  mfcc: bool = False, chroma: bool = False, spec_contrast: bool = False, split: bool = False, tonnetz: bool = False, n_mfcc: int = None,
+                  selected: dict[str, TrainingData] = None) -> ([np.ndarray], [str]):
     data = []
     labels = []
 
@@ -24,6 +24,7 @@ def load_features(normv: float, use_config: bool = True, audio_data_dir: str = N
         audio_data_dir = config["Paths"]["feature data"]
         balanced = config.getboolean("Settings", "balance")
         normalized = config.getboolean("Settings", "normalize")
+        split = config.getboolean("Settings", "split files")
         denoised = config.getboolean("Settings", "reduce noise")
         mfcc = config.getboolean("Features", "mfcc")
         chroma = config.getboolean("Features", "chroma")
@@ -48,7 +49,7 @@ def load_features(normv: float, use_config: bool = True, audio_data_dir: str = N
                 if file.endswith(".npy"):
                     af = AudioFile.AudioFile(file, speaker)
 
-                    if balanced == af.balanced and normalized == af.normalized and denoised == af.denoised and mfcc == af.mfcc and chroma == af.chroma and spec_contrast == af.speccontrast and tonnetz == af.tonnetz:
+                    if balanced == af.balanced and normalized == af.normalized and denoised == af.denoised and mfcc == af.mfcc and chroma == af.chroma and spec_contrast == af.speccontrast and tonnetz == af.tonnetz and split == af.split:
                         if mfcc and n_mfcc != af.mfcc_val:
                             continue
                         if normalized and (np.round(normv, 2) != af.norm_val):
@@ -87,10 +88,10 @@ def load_features(normv: float, use_config: bool = True, audio_data_dir: str = N
                 data_path = os.path.join(audio_data_dir, af.speaker_name, af.generate_filename())
 
                 if os.path.exists(data_path):
-                    if balanced == af.balanced and normalized == af.normalized and denoised == af.denoised and mfcc == af.mfcc and chroma == af.chroma and spec_contrast == af.speccontrast and tonnetz == af.tonnetz:
+                    if balanced == af.balanced and normalized == af.normalized and denoised == af.denoised and mfcc == af.mfcc and chroma == af.chroma and spec_contrast == af.speccontrast and tonnetz == af.tonnetz and split == af.split:
                         if mfcc and n_mfcc != af.mfcc_val:
                             continue
-                        if normalized and ( np.round(normv, 2) != af.norm_val):
+                        if normalized and (np.round(normv, 2) != af.norm_val):
                             continue
 
                         files.append(np.load(data_path))
@@ -138,24 +139,24 @@ def extract_mfccs_features(audio: np.ndarray, sample_rate: float, n_mfcc: int = 
     return np.mean(mfccs.T, axis=0)
 
 
-def extract_chroma_features(audio: np.ndarray, sample_rate: float) -> np.ndarray:
+def extract_chroma_features(audio: np.ndarray, sample_rate: float, n_chroma: int = 24) -> np.ndarray:
     """
     Chroma features are an interesting and powerful representation for music audio
     in which the entire spectrum is projected onto 12 bins representing the 12
     distinct semitones (or chroma) of the musical octave.
     """
     # print(f"Extracting Chroma features from {filename}")
-    chroma = librosa.feature.chroma_stft(y=audio, sr=sample_rate)
+    chroma = librosa.feature.chroma_stft(y=audio, sr=sample_rate, n_chroma=n_chroma)
     return np.mean(chroma.T, axis=0)
 
 
-def extract_spec_contrast_features(audio: np.ndarray, sample_rate: float) -> np.ndarray:
+def extract_spec_contrast_features(audio: np.ndarray, sample_rate: float, n_bands: int = 6) -> np.ndarray:
     """
     Spectral contrast is defined as the difference in amplitude between peaks and valleys in a sound spectrum.
     It provides a measure of spectral shape that has been shown to be important in the perception of timbre.
     """
     # print(f"Extracting Spectral Contrast features from {filename}")
-    spec_contrast = librosa.feature.spectral_contrast(y=audio, sr=sample_rate)
+    spec_contrast = librosa.feature.spectral_contrast(y=audio, sr=sample_rate, n_bands=n_bands)
     return np.mean(spec_contrast.T, axis=0)
 
 
@@ -165,12 +166,14 @@ def extract_tonnetz_features(audio: np.ndarray, sample_rate: float) -> np.ndarra
     It can be useful for key detection and chord recognition.
     """
     # print(f"Extracting Tonnetz features from {filename}")
+    # chroma = librosa.feature.chroma_cqt(y=y, sr=sr, n_chroma=24, n_octaves=7)
+    # tonnetz = librosa.feature.tonnetz(y=y, sr=sr, chroma=chroma)
     tonnetz = librosa.feature.tonnetz(y=librosa.effects.harmonic(audio), sr=sample_rate)
     return np.mean(tonnetz.T, axis=0)
 
 
 def extract_file_features(file_path: str, extract_mfcc: bool = False, extract_chroma: bool = False, extract_spec_contrast: bool = False,
-                          extract_tonnetz: bool = False, n_mfcc: int = 40, ) -> np.ndarray:
+                          extract_tonnetz: bool = False, n_mfcc: int = 40) -> np.ndarray:
     if not (extract_mfcc or extract_chroma or extract_spec_contrast or extract_tonnetz):
         raise ValueError("At least one feature set needs to be selected.")
 
@@ -258,19 +261,9 @@ def extract_file_features_multi_threaded(file_path: str, data_dir: str, threads=
         np.save(data_path, features)
 
 
-def extract_features_multi_threaded(
-        use_config: bool = True,
-        input_dir: str = None,
-        data_dir: str = None,
-        threads: int = 4,
-        over_write: bool = False,
-        extract_mfcc: bool = False,
-        nmfcc: int = 30,
-        extract_chroma: bool = False,
-        extract_spec_contrast: bool = False,
-        extract_tonnetz: bool = False,
-        selected: dict[str, TrainingData] = None
-) -> None:
+def extract_features_multi_threaded(use_config: bool = True, input_dir: str = None, data_dir: str = None, threads: int = 4, over_write: bool = False,
+                                    extract_mfcc: bool = False, nmfcc: int = 30, extract_chroma: bool = False, extract_spec_contrast: bool = False,
+                                    extract_tonnetz: bool = False, selected: dict[str, TrainingData] = None) -> None:
     if use_config:
         import configuration
         config = configuration.read_config()
@@ -352,6 +345,169 @@ def extract_features_multi_threaded(
                     dynamic_ncols=True,
                     colour="#FF7F00",
             ):
+                try:
+                    future.result()
+                except Exception as e:
+                    print(e)
+
+
+def extract_all_features_multi_threaded(use_config: bool = True, input_dir: str = None, data_dir: str = None, threads: int = 4, nmfcc: int = 20,
+                                        over_write: bool = False,
+                                        selected: dict[str, TrainingData] = None) -> None:
+    if use_config:
+        import configuration
+        config = configuration.read_config()
+        input_dir = config["Paths"]["training data"]
+        data_dir = config["Paths"]["feature data"]
+        over_write = config.getboolean("Settings", "overwrite data")
+
+        extract_mfcc = config.getboolean("Features", "mfcc")
+        nmfcc = config.getint("Settings", "N MFCC")
+        extract_chroma = config.getboolean("Features", "chroma")
+        extract_spec_contrast = config.getboolean("Features", "spec contrast")
+        extract_tonnetz = config.getboolean("Features", "tonnetz")
+
+    futures = []
+
+    speakers = []
+    if not selected:
+        speakers = os.listdir(input_dir)
+    else:
+        speakers = selected.keys()
+        rgb = RainbowColorGenerator()
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+            for speaker in speakers:
+                if speaker == "unused":
+                    continue
+
+                os.makedirs(os.path.join(data_dir, speaker), exist_ok=True)
+
+                if not selected:
+                    speaker_files = os.listdir(os.path.join(input_dir, speaker))
+                else:
+                    speaker_files = selected.get(speaker).Speaker_Files
+                for file in speaker_files:
+                    futures.append(
+                        executor.submit(
+                            extract_file_features_multi_threaded,
+                            os.path.join(input_dir, speaker, file),
+                            os.path.join(data_dir, speaker),
+                            threads,
+                            over_write,
+                            True,
+                            False,
+                            False,
+                            False,
+                            nmfcc,
+                        )
+                    )
+
+            for future in tqdm.tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc=f"Extracting MFCC features", dynamic_ncols=True,
+                                    colour=rgb.next_color(), ):
+                try:
+                    future.result()
+                except Exception as e:
+                    print(e)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+            for speaker in speakers:
+                if speaker == "unused":
+                    continue
+
+                os.makedirs(os.path.join(data_dir, speaker), exist_ok=True)
+
+                if not selected:
+                    speaker_files = os.listdir(os.path.join(input_dir, speaker))
+                else:
+                    speaker_files = selected.get(speaker).Speaker_Files
+                for file in speaker_files:
+                    futures.append(
+                        executor.submit(
+                            extract_file_features_multi_threaded,
+                            os.path.join(input_dir, speaker, file),
+                            os.path.join(data_dir, speaker),
+                            threads,
+                            over_write,
+                            False,
+                            True,
+                            False,
+                            False,
+                            40,
+                        )
+                    )
+
+            for future in tqdm.tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc=f"Extracting Chroma features", dynamic_ncols=True,
+                                    colour=rgb.next_color(), ):
+                try:
+                    future.result()
+                except Exception as e:
+                    print(e)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+            for speaker in speakers:
+                if speaker == "unused":
+                    continue
+
+                os.makedirs(os.path.join(data_dir, speaker), exist_ok=True)
+
+                if not selected:
+                    speaker_files = os.listdir(os.path.join(input_dir, speaker))
+                else:
+                    speaker_files = selected.get(speaker).Speaker_Files
+                for file in speaker_files:
+                    futures.append(
+                        executor.submit(
+                            extract_file_features_multi_threaded,
+                            os.path.join(input_dir, speaker, file),
+                            os.path.join(data_dir, speaker),
+                            threads,
+                            over_write,
+                            False,
+                            False,
+                            True,
+                            False,
+                            40,
+                        )
+                    )
+
+            for future in tqdm.tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc=f"Extracting Spectral Contrast features",
+                                    dynamic_ncols=True,
+                                    colour=rgb.next_color(), ):
+                try:
+                    future.result()
+                except Exception as e:
+                    print(e)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+            for speaker in speakers:
+                if speaker == "unused":
+                    continue
+
+                os.makedirs(os.path.join(data_dir, speaker), exist_ok=True)
+
+                if not selected:
+                    speaker_files = os.listdir(os.path.join(input_dir, speaker))
+                else:
+                    speaker_files = selected.get(speaker).Speaker_Files
+                for file in speaker_files:
+                    futures.append(
+                        executor.submit(
+                            extract_file_features_multi_threaded,
+                            os.path.join(input_dir, speaker, file),
+                            os.path.join(data_dir, speaker),
+                            threads,
+                            over_write,
+                            False,
+                            False,
+                            False,
+                            True,
+                            40,
+                        )
+                    )
+
+            for future in tqdm.tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc=f"Extracting Tonnetz features", dynamic_ncols=True,
+                                    colour=rgb.next_color(), ):
                 try:
                     future.result()
                 except Exception as e:

@@ -5,6 +5,36 @@ import warnings
 from pydub import AudioSegment
 from tqdm import tqdm
 
+def convert_seconds(total_seconds):
+    # Define the units of time and their lengths in seconds
+    time_units = {
+        "years": 60*60*24*365,
+        "months": 60*60*24*30,
+        "weeks": 60*60*24*7,
+        "days": 60*60*24,
+        "hours": 60*60,
+        "minutes": 60,
+        "seconds": 1
+    }
+
+    # Initialize the result dictionary
+    result = {}
+
+    # Iterate over the time units from largest to smallest
+    for unit in time_units:
+        # Calculate the number of full units that fit into the total seconds
+        value = total_seconds // time_units[unit]
+        # Update the total seconds with the remainder
+        total_seconds %= time_units[unit]
+        # Include the unit in the result if its value is not zero or if there is a unit to the left of it
+        if value > 0 or result:
+            result[unit] = value
+
+    # Convert the result dictionary into a string
+    result_str = ', '.join(f"{value} {unit}" for unit, value in result.items())
+
+    # Return the result string
+    return result_str
 
 class Speaker:
     Speaker_Path: str
@@ -71,7 +101,9 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_di
         if not config.getboolean("Settings", "Balance"):
             print("Balancing is disabled in the configuration file, so this step has been skipped")
             return dict()
-        if config.getboolean("Settings", "Remove Silence"):
+        if config.getboolean("Settings", "Split files"):
+            input_dir = config["Paths"]["Split Files"]
+        elif config.getboolean("Settings", "Remove Silence"):
             input_dir = config["Paths"]["remove silence files"]
         elif config.getboolean("Settings", "Reduce Noise"):
             input_dir = config["Paths"]["denoised files"]
@@ -79,6 +111,7 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_di
             input_dir = config["Paths"]["wav files"]
         else:
             input_dir = config["Paths"]["raw files"]
+
         out_put_dir = config["Paths"]["balanced files"]
         target_duration = config.getfloat("Settings", "audio duration")
 
@@ -117,7 +150,7 @@ def balance_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_di
     if target_duration != -1 and min_duration > target_duration:
         min_duration = target_duration
 
-    print(f"Target duration for each speaker: {round(min_duration, 2)} seconds.")
+    print(f"Target duration for each speaker: {convert_seconds(round(min_duration, 2))}.")
 
     def create_training_data(speaker_a: Speaker) -> TrainingData:
         sf, unused = select_audio_files(speaker_a.Speaker_Audio_Files, min_duration)
