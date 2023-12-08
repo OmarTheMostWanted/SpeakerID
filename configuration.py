@@ -74,7 +74,7 @@ def create_config() -> None:
     config.set('Settings', 'Normalize', 'yes')  # bool
     config.set('Settings', 'Reduce Noise', 'yes')  # bool
     config.set('Settings', 'N MFCC', '40')  # float
-    config.set("Settings", "split minutes", '5')
+    config.set("Settings", "split seconds", "300")  # int
 
     config.set('Settings', 'Target Amplitude', '0.0')  # float
     config.set('Settings', 'Average Amplitude', 'yes')  # bool

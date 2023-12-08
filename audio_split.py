@@ -1,12 +1,14 @@
 import os
 import librosa
 import concurrent.futures
+
+import numpy as np
 from tqdm import tqdm
 import soundfile as sf
 from audio_balancer import TrainingData
 
 
-def split_audio_librosa(input_path: str, output_path: str, split_minutes: int = 5, ):
+def split_audio_librosa(input_path: str, output_path: str, split_seconds: int = 300):
     files = []
     # Load the audio file using librosa
     data, rate = librosa.load(input_path, sr=None)
@@ -14,14 +16,14 @@ def split_audio_librosa(input_path: str, output_path: str, split_minutes: int = 
     # Convert to milliseconds and discard the first and last minute
     data = data[rate * 60:-rate * 60]
 
-    # Split audio into chunks of length split_minutes
-    for i in range(0, len(data), rate * split_minutes * 60):
-        chunk = data[i:i + rate * split_minutes * 60]
-        # Discard if chunk is less than split_minutes
-        if len(chunk) == rate * split_minutes * 60:
+    # Split audio into chunks of length split_seconds
+    for i in range(0, len(data), rate * split_seconds):
+        chunk = data[i:i + rate * split_seconds]
+        # Discard if chunk is less than split_seconds
+        if len(chunk) == rate * split_seconds:
             if output_path is not None:
                 # Save the result using soundfile
-                file_name = output_path + f"({i // (rate * split_minutes * 60)}).wav"
+                file_name = output_path + f"({i // (rate * split_seconds)}).wav"
                 files.append(file_name)
                 if not os.path.exists(file_name):
                     sf.write(file_name, chunk, rate)
@@ -30,7 +32,7 @@ def split_audio_librosa(input_path: str, output_path: str, split_minutes: int = 
 
 
 def split_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_dir: str = None,
-                             output_dir: str = None,
+                             output_dir: str = None, split_seconds: int = 300,
                              selected: dict[str, TrainingData] = None) -> float:
     if use_conf:
         import configuration
@@ -49,6 +51,7 @@ def split_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_dir:
             input_dir = config["Paths"]["raw files"]
 
         output_dir = config["Paths"]["split files"]
+        split_seconds = config.getint("Settings", "split seconds")
 
     if output_dir is not None and not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -67,7 +70,7 @@ def split_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_dir:
                         audio_path = os.path.join(os.path.join(input_dir, speaker_dir), file)
                         output_path = os.path.join(os.path.join(output_dir, speaker_dir), file[:-4] + "_split")
 
-                        futures.append(executor.submit(split_audio_librosa, audio_path, output_path))
+                        futures.append(executor.submit(split_audio_librosa, audio_path, output_path, split_seconds))
 
             for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), dynamic_ncols=True,
                                desc="Splitting audio files", colour="#4B0082"):
@@ -88,7 +91,7 @@ def split_audio_multi_thread(threads: int = 4, use_conf: bool = True, input_dir:
                         audio_path = os.path.join(os.path.join(input_dir, speaker_dir), file)
                         output_path = os.path.join(os.path.join(output_dir, speaker_dir), file[:-4] + "_split")
 
-                        futures.append(executor.submit(split_audio_librosa, audio_path, output_path))
+                        futures.append(executor.submit(split_audio_librosa, audio_path, output_path, split_seconds))
 
             for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), dynamic_ncols=True,
                                desc="Splitting audio files", colour="#4B0082"):
