@@ -1,6 +1,5 @@
 import socket
 
-
 def udp_listener(host, port):
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
         udp_socket.bind((host, port))

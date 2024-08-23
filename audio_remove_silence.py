@@ -1,17 +1,10 @@
 import warnings
-
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
 import concurrent.futures
 from tqdm import tqdm
 import os
-
-import numpy as np
 import soundfile as sf
-import librosa
-
-import numpy as np
-
 import numpy as np
 import librosa
 
@@ -135,39 +128,3 @@ def remove_silence_multi_thread(threads: int = 4, use_conf: bool = True, input_d
                 future.result()
             except Exception as e:
                 print(f"Exception occurred during removing silence: {e}")
-
-
-if __name__ == "__main__":
-    remove_silence_from_audio_librosa("/home/tmw/Digivox/audio_data/Test/00242111_000.WAV", "/home/tmw/Digivox/audio_data/Test/00242111_000_rs.WAV")
-    os.remove("/home/tmw/Digivox/audio_data/Test/00242111_000_rs.WAV")
-# Here are a couple of methods for automatically removing silent parts from audio recordings locally:
-#
-# **Method 1: Using Audacity**
-#
-# Audacity is a free and open-source audio editing software that can be used to remove silent parts from audio recordings. Here's how to do it:
-#
-# 1. Import your audio recording into Audacity.
-# 2. Select the "Silence" tool from the toolbar.
-# 3. Click and drag the mouse over the silent parts of the recording to select them.
-# 4. Press the "Delete" key to remove the selected silent parts.
-# 5. Repeat steps 3 and 4 until all of the silent parts have been removed.
-# 6. Export the edited audio recording.
-#
-# **Method 2: Using ffmpeg**
-#
-# ffmpeg is a command-line tool that can be used to manipulate audio and video files. Here's how to remove silent parts from audio recordings using ffmpeg:
-#
-# 1. Open a terminal window.
-# 2. Navigate to the directory containing your audio recording.
-# 3. Use the following command to remove silent parts from the audio recording:
-#
-#
-# ffmpeg -i input.wav -af silenceremove=start_duration=-1:end_duration=-1:duration=1:detection_threshold=-35dB output.wav
-#
-#
-# This command will remove all silent parts from the audio recording that are longer than one second. The '-35dB' parameter specifies the minimum decibel level that must be exceeded for audio to be considered non-silent.
-#
-# **Additional Notes**
-#
-# * The threshold value used to detect silence can be adjusted to remove shorter or longer silent parts.
-# * You can also use these methods to remove gaps between speech segments in a podcast or to trim the beginning and end of an audio recording.

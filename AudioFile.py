@@ -1,6 +1,5 @@
 import re
 
-
 class AudioFile:
     def __init__(self, filename, speaker_name):
         self.speaker_name: str = speaker_name

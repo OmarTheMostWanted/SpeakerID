@@ -1,4 +1,3 @@
-import audio_remove_silence
 import model_manager
 import librosa.feature
 import numpy as np
@@ -8,7 +7,6 @@ from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import LabelEncoder
 import os
 import pickle
-import concurrent.futures
 import audio_feature_extraction as afe
 import audio_normalizer as an
 import audio_noise_reducer as anr

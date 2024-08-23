@@ -1,8 +1,6 @@
 import os
 import librosa
 import concurrent.futures
-
-import numpy as np
 from tqdm import tqdm
 import soundfile as sf
 from audio_balancer import TrainingData

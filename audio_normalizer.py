@@ -1,38 +1,12 @@
 import os
 import concurrent.futures
 import warnings
-
 import numpy
 from pydub import AudioSegment
 from tqdm import tqdm
-
 from audio_balancer import TrainingData
-
 import librosa
 import numpy as np
-
-
-# Both of your approaches to audio normalization have their merits and could potentially work well for your project.
-# Here’s a brief comparison:
-#
-# Amplitude Normalization: This method adjusts the gain of the audio files to match a target amplitude. It’s a simple
-# and effective way to ensure that all audio files have a consistent volume level. However, it doesn’t take into
-# account the distribution of the audio samples, which could be important if there’s a lot of variation in your data.
-#
-# Standard Score Normalization (Z-score): This method adjusts the audio samples based on their mean and standard
-# deviation. It’s a more sophisticated approach that can handle a wider range of data distributions. However,
-# it requires calculating the mean and standard deviation for each audio file, which could be computationally
-# expensive if you have a large number of files.
-#
-# To determine which method is better for your project, you could perform an experiment where you train your model
-# with both sets of normalized audio files and compare the results. You could use a metric such as accuracy or F1
-# score to evaluate the performance of your model. The method that yields the best performance would be the one to go
-# with.
-#
-# Remember, the goal of normalization in this context is to ensure that the model focuses on learning the
-# distinguishing features of each speaker’s voice, rather than being influenced by extraneous factors such as
-# recording volume or background noise. So whichever method best achieves this goal in your specific scenario would
-# be the one to go with. Good luck with your project!
 
 def calculate_parameters(file_paths):
     # Initialize variables to calculate mean and standard deviation
